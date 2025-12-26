@@ -30,7 +30,8 @@ export async function GET(req: NextRequest, context: { params: Promise<{ path: s
 
   try {
     const data = await fs.promises.readFile(filePath)
-    return new NextResponse(data, {
+    const blob = new Blob([data])
+    return new NextResponse(blob, {
       status: 200,
       headers: {
         'Content-Type': detectMime(filePath),
