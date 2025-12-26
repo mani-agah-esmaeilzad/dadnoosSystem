@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/guards'
-import { getActiveSubscription } from '@/lib/billing/quota'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -19,6 +17,8 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const { getActiveSubscription } = await import('@/lib/billing/quota')
+    const { prisma } = await import('@/lib/db/prisma')
     const auth = requireAuth(req)
     const subscription = await getActiveSubscription(auth.sub)
 

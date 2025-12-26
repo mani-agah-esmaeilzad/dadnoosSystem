@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
-import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/guards'
-import { ensureDefaultPlan } from '@/lib/billing/defaultPlan'
 import { env } from '@/lib/env'
 
 const bodySchema = z.object({
@@ -33,6 +31,8 @@ export async function POST(req: NextRequest) {
       })
     }
 
+    const { ensureDefaultPlan } = await import('@/lib/billing/defaultPlan')
+    const { prisma } = await import('@/lib/db/prisma')
     const auth = requireAuth(req)
     await ensureDefaultPlan()
     const body = bodySchema.parse(await req.json())

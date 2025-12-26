@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { prisma } from '@/lib/db/prisma'
-import { ensureDefaultPlan } from '@/lib/billing/defaultPlan'
 import { env } from '@/lib/env'
 
 export const runtime = 'nodejs'
@@ -33,6 +31,8 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const { ensureDefaultPlan } = await import('@/lib/billing/defaultPlan')
+    const { prisma } = await import('@/lib/db/prisma')
     await ensureDefaultPlan()
     const plans = await prisma.subscriptionPlan.findMany({
       where: includeOrg ? {} : { isOrganizational: false },
