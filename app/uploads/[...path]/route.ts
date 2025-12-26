@@ -19,9 +19,10 @@ function detectMime(filePath: string) {
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-export async function GET(req: NextRequest, { params }: { params: { path: string[] } }) {
+export async function GET(req: NextRequest, context: { params: Promise<{ path: string[] }> }) {
+  const { path: segments } = await context.params
   const uploadsDir = path.resolve(process.cwd(), env.UPLOADS_DIR)
-  const requested = params.path.join('/')
+  const requested = segments.join('/')
   const filePath = path.join(uploadsDir, requested)
   if (!filePath.startsWith(uploadsDir)) {
     return NextResponse.json({ detail: 'Not found' }, { status: 404 })
