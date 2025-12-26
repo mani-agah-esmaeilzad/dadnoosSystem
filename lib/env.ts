@@ -46,46 +46,52 @@ const envSchema = z.object({
 
 export type AppEnv = z.infer<typeof envSchema>
 
+const sanitize = (value: string | undefined | null) => {
+  if (value === undefined || value === null) return undefined
+  const trimmed = value.trim()
+  return trimmed.length === 0 ? undefined : trimmed
+}
+
 const rawEnv = {
-  DATABASE_URL: process.env.DATABASE_URL,
-  REDIS_URL: process.env.REDIS_URL,
-  JWT_SECRET: process.env.JWT_SECRET,
-  JWT_ISSUER: process.env.JWT_ISSUER,
-  JWT_AUDIENCE: process.env.JWT_AUDIENCE,
-  TOKEN_DEFAULT_TTL_HOURS: process.env.TOKEN_DEFAULT_TTL_HOURS,
-  APP_NAME: process.env.APP_NAME,
-  PUBLIC_BASE_URL: process.env.PUBLIC_BASE_URL,
-  UPLOADS_DIR: process.env.UPLOADS_DIR,
-  MAX_UPLOAD_BYTES: process.env.MAX_UPLOAD_BYTES,
-  OTP_TTL_SECONDS: process.env.OTP_TTL_SECONDS,
-  OTP_COOLDOWN_SECONDS: process.env.OTP_COOLDOWN_SECONDS,
-  OTP_MAX_ATTEMPTS: process.env.OTP_MAX_ATTEMPTS,
-  OTP_BYPASS_IN_DEV: process.env.OTP_BYPASS_IN_DEV,
-  OTP_FIXED_CODE: process.env.OTP_FIXED_CODE,
-  OTP_ACCEPT_MASTER_CODE: process.env.OTP_ACCEPT_MASTER_CODE,
-  OTP_STATIC_LOGIN_PHONE: process.env.OTP_STATIC_LOGIN_PHONE,
-  OTP_STATIC_LOGIN_CODE: process.env.OTP_STATIC_LOGIN_CODE,
-  OTP_DEV_MODE: process.env.OTP_DEV_MODE,
-  MELIPAYAMAK_OTP_BASE_URL: process.env.MELIPAYAMAK_OTP_BASE_URL,
-  MELIPAYAMAK_OTP_TOKEN: process.env.MELIPAYAMAK_OTP_TOKEN,
-  ADMIN_API_KEY: process.env.ADMIN_API_KEY,
-  TOKEN_ISSUER_API_KEY: process.env.TOKEN_ISSUER_API_KEY,
-  RATE_LIMIT_WINDOW_SEC: process.env.RATE_LIMIT_WINDOW_SEC,
-  RATE_LIMIT_MAX_REQUESTS: process.env.RATE_LIMIT_MAX_REQUESTS,
-  BILLING_REQUIRE_SUBSCRIPTION: process.env.BILLING_REQUIRE_SUBSCRIPTION,
-  DEFAULT_PLAN_TOKEN_QUOTA: process.env.DEFAULT_PLAN_TOKEN_QUOTA,
-  DEFAULT_PLAN_DURATION_DAYS: process.env.DEFAULT_PLAN_DURATION_DAYS,
-  DEFAULT_PLAN_CODE: process.env.DEFAULT_PLAN_CODE,
-  DEFAULT_PLAN_TITLE: process.env.DEFAULT_PLAN_TITLE,
-  LLM_PROVIDER: process.env.LLM_PROVIDER,
-  LLM_API_KEY: process.env.LLM_API_KEY,
-  LLM_MODEL: process.env.LLM_MODEL,
-  LLM_BASE_URL: process.env.LLM_BASE_URL,
-  TRANSCRIPTION_MODEL: process.env.TRANSCRIPTION_MODEL,
-  TRANSCRIPTION_LANGUAGE: process.env.TRANSCRIPTION_LANGUAGE,
-  TTS_MODEL: process.env.TTS_MODEL,
-  TTS_DEFAULT_VOICE: process.env.TTS_DEFAULT_VOICE,
-  AUDIO_STUB_MODE: process.env.AUDIO_STUB_MODE,
+  DATABASE_URL: sanitize(process.env.DATABASE_URL),
+  REDIS_URL: sanitize(process.env.REDIS_URL),
+  JWT_SECRET: sanitize(process.env.JWT_SECRET),
+  JWT_ISSUER: sanitize(process.env.JWT_ISSUER),
+  JWT_AUDIENCE: sanitize(process.env.JWT_AUDIENCE),
+  TOKEN_DEFAULT_TTL_HOURS: sanitize(process.env.TOKEN_DEFAULT_TTL_HOURS),
+  APP_NAME: sanitize(process.env.APP_NAME),
+  PUBLIC_BASE_URL: sanitize(process.env.PUBLIC_BASE_URL),
+  UPLOADS_DIR: sanitize(process.env.UPLOADS_DIR),
+  MAX_UPLOAD_BYTES: sanitize(process.env.MAX_UPLOAD_BYTES),
+  OTP_TTL_SECONDS: sanitize(process.env.OTP_TTL_SECONDS),
+  OTP_COOLDOWN_SECONDS: sanitize(process.env.OTP_COOLDOWN_SECONDS),
+  OTP_MAX_ATTEMPTS: sanitize(process.env.OTP_MAX_ATTEMPTS),
+  OTP_BYPASS_IN_DEV: sanitize(process.env.OTP_BYPASS_IN_DEV),
+  OTP_FIXED_CODE: sanitize(process.env.OTP_FIXED_CODE),
+  OTP_ACCEPT_MASTER_CODE: sanitize(process.env.OTP_ACCEPT_MASTER_CODE),
+  OTP_STATIC_LOGIN_PHONE: sanitize(process.env.OTP_STATIC_LOGIN_PHONE),
+  OTP_STATIC_LOGIN_CODE: sanitize(process.env.OTP_STATIC_LOGIN_CODE),
+  OTP_DEV_MODE: sanitize(process.env.OTP_DEV_MODE),
+  MELIPAYAMAK_OTP_BASE_URL: sanitize(process.env.MELIPAYAMAK_OTP_BASE_URL),
+  MELIPAYAMAK_OTP_TOKEN: sanitize(process.env.MELIPAYAMAK_OTP_TOKEN),
+  ADMIN_API_KEY: sanitize(process.env.ADMIN_API_KEY),
+  TOKEN_ISSUER_API_KEY: sanitize(process.env.TOKEN_ISSUER_API_KEY),
+  RATE_LIMIT_WINDOW_SEC: sanitize(process.env.RATE_LIMIT_WINDOW_SEC),
+  RATE_LIMIT_MAX_REQUESTS: sanitize(process.env.RATE_LIMIT_MAX_REQUESTS),
+  BILLING_REQUIRE_SUBSCRIPTION: sanitize(process.env.BILLING_REQUIRE_SUBSCRIPTION),
+  DEFAULT_PLAN_TOKEN_QUOTA: sanitize(process.env.DEFAULT_PLAN_TOKEN_QUOTA),
+  DEFAULT_PLAN_DURATION_DAYS: sanitize(process.env.DEFAULT_PLAN_DURATION_DAYS),
+  DEFAULT_PLAN_CODE: sanitize(process.env.DEFAULT_PLAN_CODE),
+  DEFAULT_PLAN_TITLE: sanitize(process.env.DEFAULT_PLAN_TITLE),
+  LLM_PROVIDER: sanitize(process.env.LLM_PROVIDER),
+  LLM_API_KEY: sanitize(process.env.LLM_API_KEY),
+  LLM_MODEL: sanitize(process.env.LLM_MODEL),
+  LLM_BASE_URL: sanitize(process.env.LLM_BASE_URL),
+  TRANSCRIPTION_MODEL: sanitize(process.env.TRANSCRIPTION_MODEL),
+  TRANSCRIPTION_LANGUAGE: sanitize(process.env.TRANSCRIPTION_LANGUAGE),
+  TTS_MODEL: sanitize(process.env.TTS_MODEL),
+  TTS_DEFAULT_VOICE: sanitize(process.env.TTS_DEFAULT_VOICE),
+  AUDIO_STUB_MODE: sanitize(process.env.AUDIO_STUB_MODE),
 }
 
 const buildFallbacks: Record<string, string> = {
@@ -127,21 +133,26 @@ const shouldAllowFallback = isBuildTime || process.env.VERCEL === '1' || process
 const mergeWithFallbacks = () => {
   const merged: Record<string, string | undefined> = { ...buildFallbacks }
   for (const [key, value] of Object.entries(rawEnv)) {
-    if (value !== undefined && value !== '') {
+    if (value !== undefined) {
       merged[key] = value
     }
   }
   return merged
 }
 
+const fallbackFlag = globalThis as unknown as { __envFallbackLogged?: boolean }
+
 export const env: AppEnv = (() => {
-  try {
-    return envSchema.parse(rawEnv)
-  } catch (error) {
-    if (shouldAllowFallback) {
-      console.warn('Env validation failed, using fallback values.', error)
-      return envSchema.parse(mergeWithFallbacks())
-    }
-    throw error
+  const parseResult = envSchema.safeParse(rawEnv)
+  if (parseResult.success) {
+    return parseResult.data
   }
+  if (!shouldAllowFallback) {
+    throw parseResult.error
+  }
+  if (!fallbackFlag.__envFallbackLogged) {
+    console.warn('Env validation failed; falling back to safe defaults. This indicates required env vars are missing.')
+    fallbackFlag.__envFallbackLogged = true
+  }
+  return envSchema.parse(mergeWithFallbacks())
 })()
