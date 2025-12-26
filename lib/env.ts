@@ -128,7 +128,13 @@ export const env: AppEnv = (() => {
   } catch (error) {
     if (isBuildTime) {
       console.warn('Env validation failed during build, using fallback values.')
-      return envSchema.parse({ ...buildFallbacks, ...rawEnv })
+      const merged: Record<string, string | undefined> = { ...buildFallbacks }
+      for (const [key, value] of Object.entries(rawEnv)) {
+        if (value !== undefined && value !== '') {
+          merged[key] = value
+        }
+      }
+      return envSchema.parse(merged)
     }
     throw error
   }
