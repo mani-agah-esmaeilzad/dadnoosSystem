@@ -83,6 +83,7 @@ export async function POST(req: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ detail: 'ورودی نامعتبر است.', issues: error.flatten() }, { status: 400 })
     }
+    console.error('Chat endpoint error:', error)
     const status = (error as { status?: number }).status || 500
     const message = error instanceof Error ? error.message : 'Internal server error'
     return NextResponse.json({ detail: message }, { status })
