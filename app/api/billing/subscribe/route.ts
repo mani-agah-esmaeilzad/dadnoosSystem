@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/guards'
 import { ensureDefaultPlan } from '@/lib/billing/defaultPlan'
+import { env } from '@/lib/env'
 
 const bodySchema = z.object({
   plan_id: z.string().min(1),
@@ -12,8 +13,26 @@ const bodySchema = z.object({
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+const isVercelBuild = process.env.VERCEL === '1' && process.env.NEXT_PHASE === 'phase-production-build'
+
 export async function POST(req: NextRequest) {
   try {
+    if (isVercelBuild) {
+      return NextResponse.json({
+        id: 'build-placeholder',
+        plan_id: env.DEFAULT_PLAN_CODE,
+        plan_code: env.DEFAULT_PLAN_CODE,
+        plan_title: env.DEFAULT_PLAN_TITLE,
+        token_quota: env.DEFAULT_PLAN_TOKEN_QUOTA,
+        tokens_used: 0,
+        remaining_tokens: env.DEFAULT_PLAN_TOKEN_QUOTA,
+        started_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + env.DEFAULT_PLAN_DURATION_DAYS * 24 * 60 * 60 * 1000).toISOString(),
+        active: true,
+        build_placeholder: true,
+      })
+    }
+
     const auth = requireAuth(req)
     await ensureDefaultPlan()
     const body = bodySchema.parse(await req.json())

@@ -2,14 +2,38 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { prisma } from '@/lib/db/prisma'
 import { ensureDefaultPlan } from '@/lib/billing/defaultPlan'
+import { env } from '@/lib/env'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+const isVercelBuild = process.env.VERCEL === '1' && process.env.NEXT_PHASE === 'phase-production-build'
+
+const FALLBACK_PLAN = {
+  id: `fallback-${env.DEFAULT_PLAN_CODE}`,
+  code: env.DEFAULT_PLAN_CODE,
+  title: env.DEFAULT_PLAN_TITLE,
+  duration_days: env.DEFAULT_PLAN_DURATION_DAYS,
+  token_quota: env.DEFAULT_PLAN_TOKEN_QUOTA,
+  is_organizational: false,
+}
+
+function buildFallbackPlans(includeOrg: boolean) {
+  if (includeOrg) {
+    return [FALLBACK_PLAN]
+  }
+  return [FALLBACK_PLAN].filter((plan) => !plan.is_organizational)
+}
+
 export async function GET(req: NextRequest) {
+  const includeOrg = req.nextUrl.searchParams.get('include_org') === 'true'
+
+  if (isVercelBuild) {
+    return NextResponse.json({ plans: buildFallbackPlans(includeOrg), build_placeholder: true })
+  }
+
   try {
     await ensureDefaultPlan()
-    const includeOrg = req.nextUrl.searchParams.get('include_org') === 'true'
     const plans = await prisma.subscriptionPlan.findMany({
       where: includeOrg ? {} : { isOrganizational: false },
       orderBy: { createdAt: 'asc' },
@@ -23,11 +47,10 @@ export async function GET(req: NextRequest) {
       token_quota: plan.tokenQuota,
       is_organizational: plan.isOrganizational,
     }))
-
     return NextResponse.json({ plans: payload })
   } catch (error) {
-    const status = (error as { status?: number }).status || 500
     const message = error instanceof Error ? error.message : 'Internal server error'
-    return NextResponse.json({ detail: message }, { status })
+    console.error('Billing plans query failed, using fallback response:', message)
+    return NextResponse.json({ plans: buildFallbackPlans(includeOrg), detail: 'billing_plans_fallback' })
   }
 }

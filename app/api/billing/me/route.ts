@@ -7,7 +7,17 @@ import { getActiveSubscription } from '@/lib/billing/quota'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+const isVercelBuild = process.env.VERCEL === '1' && process.env.NEXT_PHASE === 'phase-production-build'
+
 export async function GET(req: NextRequest) {
+  if (isVercelBuild) {
+    return NextResponse.json({
+      has_subscription: false,
+      subscription: null,
+      build_placeholder: true,
+    })
+  }
+
   try {
     const auth = requireAuth(req)
     const subscription = await getActiveSubscription(auth.sub)
@@ -32,8 +42,15 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ has_subscription: true, subscription: payload })
   } catch (error) {
-    const status = (error as { status?: number }).status || 500
     const message = error instanceof Error ? error.message : 'Internal server error'
-    return NextResponse.json({ detail: message }, { status })
+    console.error('Billing me endpoint failed:', message)
+    return NextResponse.json(
+      {
+        has_subscription: false,
+        subscription: null,
+        detail: 'billing_me_unavailable',
+      },
+      { status: 200 }
+    )
   }
 }
