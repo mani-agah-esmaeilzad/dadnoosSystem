@@ -92,6 +92,8 @@ const buildFallbacks: Record<string, string> = {
   DATABASE_URL: 'postgresql://build:build@localhost:5432/build',
   REDIS_URL: 'redis://127.0.0.1:6379',
   JWT_SECRET: 'build-secret-key-please-change',
+  JWT_ISSUER: 'dadnoos.build',
+  JWT_AUDIENCE: 'dadnoos.build.app',
   APP_NAME: 'Dadnoos',
   PUBLIC_BASE_URL: 'http://localhost:3052',
   UPLOADS_DIR: './public/uploads',
@@ -113,6 +115,11 @@ const buildFallbacks: Record<string, string> = {
   LLM_PROVIDER: 'openai',
   LLM_API_KEY: 'build-key',
   LLM_MODEL: 'gpt-4o-mini',
+  TRANSCRIPTION_MODEL: 'gpt-4o-transcribe',
+  TRANSCRIPTION_LANGUAGE: 'fa',
+  TTS_MODEL: 'gpt-4o-mini-tts',
+  TTS_DEFAULT_VOICE: 'alloy',
+  AUDIO_STUB_MODE: 'true',
 }
 
 export const env: AppEnv = (() => {
