@@ -1,0 +1,85 @@
+import { SYSTEM_PROMPT } from '@/lib/agent/systemPrompt'
+import { createChatCompletion, LlmMessage } from '@/lib/llm/client'
+
+export interface ConversationTurn {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+export interface AgentMetadataAttachment {
+  name?: string | null
+  mime?: string | null
+  size?: number | null
+  summary?: string | null
+}
+
+export interface AgentMetadata {
+  attachments?: AgentMetadataAttachment[]
+  notes?: string
+}
+
+export interface RunAgentInput {
+  message: string
+  history?: ConversationTurn[]
+  metadata?: AgentMetadata
+}
+
+export interface RunAgentResult {
+  text: string
+}
+
+const MAX_ATTACHMENT_CONTEXT = 6000
+const MAX_PER_ATTACHMENT = 600
+
+function formatMetadata(metadata?: AgentMetadata) {
+  if (!metadata) return ''
+  const parts: string[] = []
+  const attachments = metadata.attachments || []
+  if (attachments.length) {
+    let used = 0
+    const blocks: string[] = []
+    attachments.forEach((att, idx) => {
+      if (used >= MAX_ATTACHMENT_CONTEXT) {
+        return
+      }
+      const header = `فایل ${idx + 1}: ${att?.name || 'بدون نام'} (${att?.mime || 'بدون نوع'}, ${att?.size || '?'} بایت)`
+      const snippetSource = att.summary || 'متن استخراج نشد.'
+      const remaining = Math.max(0, MAX_ATTACHMENT_CONTEXT - used - header.length)
+      if (remaining <= 0) {
+        return
+      }
+      const snippet = snippetSource.slice(0, Math.min(MAX_PER_ATTACHMENT, remaining))
+      const block = `${header}\n${snippet}`
+      used += block.length
+      blocks.push(block)
+    })
+    if (blocks.length) {
+      parts.push(`[خلاصه پیوست‌ها]\n${blocks.join('\n\n')}`)
+    }
+  }
+  if (metadata.notes) {
+    parts.push(`یادداشت سیستم:\n${metadata.notes}`)
+  }
+  if (parts.length === 0) return ''
+  return `\n\n[اطلاعات کمکی]\n${parts.join('\n\n')}`
+}
+
+export function buildAgentMessages(history: ConversationTurn[], message: string, metadata?: AgentMetadata): LlmMessage[] {
+  const llmMessages: LlmMessage[] = [{ role: 'system', content: SYSTEM_PROMPT }]
+
+  history.forEach((turn) => {
+    if (turn.role === 'user' || turn.role === 'assistant') {
+      llmMessages.push({ role: turn.role, content: turn.content })
+    }
+  })
+
+  llmMessages.push({ role: 'user', content: `${message}${formatMetadata(metadata)}` })
+  return llmMessages
+}
+
+export async function runAgent({ message, history = [], metadata }: RunAgentInput): Promise<RunAgentResult> {
+  const llmMessages = buildAgentMessages(history, message, metadata)
+
+  const text = await createChatCompletion({ messages: llmMessages })
+  return { text }
+}

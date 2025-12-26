@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String            @id @default(uuid())
+  username        String            @unique
+  passwordHash    String?
+  createdAt       DateTime          @default(now())
+  sessions        ChatSession[]
+  subscriptions   UserSubscription[]
+}
+
+model ChatSession {
+  userId     String
+  chatId     String
+  createdAt  DateTime         @default(now())
+  title      String?
+  metadata   Json?
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages    Message[]
+  attachments ChatAttachment[]
+
+  @@id([userId, chatId])
+  @@index([userId, createdAt], map: "ix_chatsessions_user_created")
+}
+
+model Message {
+  id        String    @id @default(uuid())
+  userId    String
+  chatId    String
+  role      String
+  content   String
+  timestamp DateTime  @default(now())
+
+  session ChatSession @relation(fields: [userId, chatId], references: [userId, chatId], onDelete: Cascade)
+
+  @@index([userId, chatId, timestamp], map: "ix_messages_user_chat_ts")
+}
+
+model Document {
+  id         String           @id @default(uuid())
+  title      String?
+  source     String?
+  metadata   Json?
+  createdAt  DateTime         @default(now())
+
+  chunks      DocumentChunk[]
+  attachments ChatAttachment[]
+
+  @@index([createdAt], map: "ix_documents_created_at")
+}
+
+model DocumentChunk {
+  id         String   @id @default(uuid())
+  documentId String
+  chunkIndex Int
+  content    String
+  pageStart  Int?
+  pageEnd    Int?
+  headings   Json?
+  tokens     Int       @default(0)
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId, pageStart, pageEnd], map: "ix_docchunks_document_page")
+}
+
+model ChatAttachment {
+  id         String    @id @default(uuid())
+  userId     String
+  chatId     String
+  documentId String?
+  fileName   String?
+  mimeType   String?
+  fileUrl    String?
+  sizeBytes  Int?
+  createdAt  DateTime  @default(now())
+  summary    String?   @db.Text
+
+  session  ChatSession @relation(fields: [userId, chatId], references: [userId, chatId], onDelete: Cascade)
+  document Document?   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([userId, chatId, createdAt], map: "ix_chatattach_user_chat_created")
+}
+
+model SubscriptionPlan {
+  id                String             @id @default(uuid())
+  code              String             @unique
+  title             String
+  durationDays      Int
+  tokenQuota        Int
+  isOrganizational  Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+
+  subscriptions UserSubscription[]
+}
+
+model UserSubscription {
+  id         String    @id @default(uuid())
+  userId     String
+  planId     String?
+  tokenQuota Int
+  tokensUsed Int       @default(0)
+  startedAt  DateTime  @default(now())
+  expiresAt  DateTime
+  active     Boolean   @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan SubscriptionPlan? @relation(fields: [planId], references: [id])
+
+  @@index([userId], map: "ix_usersubscriptions_user")
+}
