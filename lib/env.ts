@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { isBuildTime } from '@/lib/runtime/build'
+
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   REDIS_URL: z.string().min(1, 'REDIS_URL is required'),
@@ -44,7 +46,7 @@ const envSchema = z.object({
 
 export type AppEnv = z.infer<typeof envSchema>
 
-export const env: AppEnv = envSchema.parse({
+const rawEnv = {
   DATABASE_URL: process.env.DATABASE_URL,
   REDIS_URL: process.env.REDIS_URL,
   JWT_SECRET: process.env.JWT_SECRET,
@@ -84,4 +86,43 @@ export const env: AppEnv = envSchema.parse({
   TTS_MODEL: process.env.TTS_MODEL,
   TTS_DEFAULT_VOICE: process.env.TTS_DEFAULT_VOICE,
   AUDIO_STUB_MODE: process.env.AUDIO_STUB_MODE,
-})
+}
+
+const buildFallbacks: Record<string, string> = {
+  DATABASE_URL: 'postgresql://build:build@localhost:5432/build',
+  REDIS_URL: 'redis://127.0.0.1:6379',
+  JWT_SECRET: 'build-secret-key-please-change',
+  APP_NAME: 'Dadnoos',
+  PUBLIC_BASE_URL: 'http://localhost:3052',
+  UPLOADS_DIR: './public/uploads',
+  MAX_UPLOAD_BYTES: '20000000',
+  OTP_TTL_SECONDS: '180',
+  OTP_COOLDOWN_SECONDS: '60',
+  OTP_MAX_ATTEMPTS: '5',
+  OTP_BYPASS_IN_DEV: 'true',
+  OTP_FIXED_CODE: '111111',
+  OTP_ACCEPT_MASTER_CODE: 'true',
+  OTP_DEV_MODE: 'true',
+  RATE_LIMIT_WINDOW_SEC: '60',
+  RATE_LIMIT_MAX_REQUESTS: '60',
+  BILLING_REQUIRE_SUBSCRIPTION: 'false',
+  DEFAULT_PLAN_TOKEN_QUOTA: '100000',
+  DEFAULT_PLAN_DURATION_DAYS: '30',
+  DEFAULT_PLAN_CODE: 'FREE',
+  DEFAULT_PLAN_TITLE: 'پلن رایگان',
+  LLM_PROVIDER: 'openai',
+  LLM_API_KEY: 'build-key',
+  LLM_MODEL: 'gpt-4o-mini',
+}
+
+export const env: AppEnv = (() => {
+  try {
+    return envSchema.parse(rawEnv)
+  } catch (error) {
+    if (isBuildTime) {
+      console.warn('Env validation failed during build, using fallback values.')
+      return envSchema.parse({ ...buildFallbacks, ...rawEnv })
+    }
+    throw error
+  }
+})()
