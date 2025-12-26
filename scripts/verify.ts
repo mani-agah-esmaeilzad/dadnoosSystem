@@ -84,7 +84,7 @@ async function otpFlow() {
 }
 
 async function ensurePlan(token: string) {
-  const plans = await requestJson<{ plans: { id: string }[] }>('/billing/plans?include_org=true', {
+  const plans = await requestJson<{ plans: { id: string }[] }>('/api/billing/plans?include_org=true', {
     method: 'GET',
     token,
   })
@@ -95,7 +95,7 @@ async function ensurePlan(token: string) {
 }
 
 async function subscribePlan(token: string, planId: string) {
-  await requestJson('/billing/subscribe', {
+  await requestJson('/api/billing/subscribe', {
     method: 'POST',
     token,
     body: JSON.stringify({ plan_id: planId }),
@@ -105,7 +105,7 @@ async function subscribePlan(token: string, planId: string) {
 
 async function verifyBilling(token: string) {
   const billing = await requestJson<{ has_subscription: boolean; subscription: { plan_id: string } | null }>(
-    '/billing/me',
+    '/api/billing/me',
     {
       method: 'GET',
       token,

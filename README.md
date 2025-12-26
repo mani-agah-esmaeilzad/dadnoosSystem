@@ -26,7 +26,7 @@ Key variables:
 - `UPLOADS_DIR`, `PUBLIC_BASE_URL`: where user uploads are stored and how files are served (default: `public/uploads` + `/uploads/*` route)
 - `RATE_LIMIT_*`, `OTP_*`, `OTP_DEV_MODE`: throttling and OTP behaviour; enable `OTP_DEV_MODE=true` in development to receive the OTP code in the API response.
 - `AUDIO_STUB_MODE`: when true, `/api/v1/audio/*` returns stubbed responses so you can run verification without calling the upstream provider.
-- `BILLING_REQUIRE_SUBSCRIPTION`: set to `false` to bypass quota checks in dev (default `true`). Default plan metadata (`DEFAULT_PLAN_*`) controls the auto-seeded plan returned by `/billing/plans`.
+- `BILLING_REQUIRE_SUBSCRIPTION`: set to `false` to bypass quota checks in dev (default `true`). Default plan metadata (`DEFAULT_PLAN_*`) controls the auto-seeded plan returned by `/api/billing/plans`.
 - `NEXT_PUBLIC_API_BASE_URL`: optional override for the frontend HTTP client (leave empty for same-origin).
 
 ## Database & Prisma

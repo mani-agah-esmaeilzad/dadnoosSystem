@@ -239,18 +239,18 @@ class ApiService {
 
   async getPlans(includeOrg: boolean = false): Promise<{ plans: SubscriptionPlan[] }> {
     const params = includeOrg ? '?include_org=true' : ''
-    const response = await this.request<{ plans: SubscriptionPlan[] }>(`/billing/plans${params}`, {
+    const response = await this.request<{ plans: SubscriptionPlan[] }>(`/api/billing/plans${params}`, {
       method: 'GET',
     })
     return response
   }
 
   async getBilling(): Promise<BillingResponse> {
-    return this.request<BillingResponse>('/billing/me', { method: 'GET' })
+    return this.request<BillingResponse>('/api/billing/me', { method: 'GET' })
   }
 
   async subscribePlan(planId: string): Promise<UserSubscription> {
-    return this.request<UserSubscription>('/billing/subscribe', {
+    return this.request<UserSubscription>('/api/billing/subscribe', {
       method: 'POST',
       body: JSON.stringify({ plan_id: planId }),
     })
