@@ -100,7 +100,8 @@ function createMemoryRedis() {
 }
 
 const shouldUseMemoryRedis =
-  process.env.VERCEL === '1' && /localhost|127\.0\.0\.1/.test(env.REDIS_URL || '')
+  process.env.VERCEL === '1' &&
+  (!env.REDIS_URL || /localhost|127\.0\.0\.1/.test(env.REDIS_URL || ''))
 
 export const redis =
   globalForRedis.redis ||
