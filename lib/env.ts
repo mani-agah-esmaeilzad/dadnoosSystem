@@ -122,19 +122,25 @@ const buildFallbacks: Record<string, string> = {
   AUDIO_STUB_MODE: 'true',
 }
 
+const shouldAllowFallback = isBuildTime || process.env.VERCEL === '1' || process.env.ALLOW_RUNTIME_ENV_FALLBACK === '1'
+
+const mergeWithFallbacks = () => {
+  const merged: Record<string, string | undefined> = { ...buildFallbacks }
+  for (const [key, value] of Object.entries(rawEnv)) {
+    if (value !== undefined && value !== '') {
+      merged[key] = value
+    }
+  }
+  return merged
+}
+
 export const env: AppEnv = (() => {
   try {
     return envSchema.parse(rawEnv)
   } catch (error) {
-    if (isBuildTime) {
-      console.warn('Env validation failed during build, using fallback values.')
-      const merged: Record<string, string | undefined> = { ...buildFallbacks }
-      for (const [key, value] of Object.entries(rawEnv)) {
-        if (value !== undefined && value !== '') {
-          merged[key] = value
-        }
-      }
-      return envSchema.parse(merged)
+    if (shouldAllowFallback) {
+      console.warn('Env validation failed, using fallback values.', error)
+      return envSchema.parse(mergeWithFallbacks())
     }
     throw error
   }
