@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
-import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/guards'
+import { isBuildTime } from '@/lib/runtime/build'
 
 const bodySchema = z.object({ title: z.string().min(1) })
 
@@ -14,6 +14,18 @@ export async function PATCH(
   context: { params: Promise<{ userId: string; chatId: string }> }
 ) {
   try {
+    if (isBuildTime) {
+      return NextResponse.json({
+        chat_id: 'build-placeholder',
+        user_id: 'build-placeholder',
+        title: 'گفتگو',
+        created_at: new Date().toISOString(),
+        build_placeholder: true,
+      })
+    }
+
+    const { prisma } = await import('@/lib/db/prisma')
+
     const { userId, chatId } = await context.params
     const auth = requireAuth(req)
     if (auth.sub !== userId) {

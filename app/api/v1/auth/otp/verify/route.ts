@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
-import { prisma } from '@/lib/db/prisma'
 import { env } from '@/lib/env'
 import { issueAccessToken, asTokenResponse } from '@/lib/auth/jwt'
 import { normalizePhone, isValidPhone, otpAttemptsKey, otpKey, otpVerifiedKey } from '@/lib/auth/otp'
-import { redis } from '@/lib/redis/client'
+import { isBuildTime } from '@/lib/runtime/build'
 
 const verifySchema = z.object({
   phone: z.string().min(5),
@@ -15,18 +14,27 @@ const verifySchema = z.object({
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-async function ensureUser(phone: string) {
-  const existing = await prisma.user.findFirst({ where: { username: phone } })
-  if (existing) return existing
-  return prisma.user.create({
-    data: {
-      username: phone,
-    },
-  })
-}
-
 export async function POST(req: NextRequest) {
   try {
+    if (isBuildTime) {
+      return NextResponse.json({ detail: 'build placeholder', build_placeholder: true })
+    }
+
+    const [{ prisma }, { redis }] = await Promise.all([
+      import('@/lib/db/prisma'),
+      import('@/lib/redis/client'),
+    ])
+
+    const ensureUser = async (phone: string) => {
+      const existing = await prisma.user.findFirst({ where: { username: phone } })
+      if (existing) return existing
+      return prisma.user.create({
+        data: {
+          username: phone,
+        },
+      })
+    }
+
     const body = await req.json()
     const { phone, code } = verifySchema.parse(body)
 

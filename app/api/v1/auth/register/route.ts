@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
-import { prisma } from '@/lib/db/prisma'
 import { hashPassword } from '@/lib/auth/password'
 import { issueAccessToken, asTokenResponse } from '@/lib/auth/jwt'
 import { normalizePhone, isValidPhone, otpVerifiedKey } from '@/lib/auth/otp'
-import { redis } from '@/lib/redis/client'
+import { isBuildTime } from '@/lib/runtime/build'
 
 const registerSchema = z.object({
   username: z.string().min(3),
@@ -18,6 +17,15 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
+    if (isBuildTime) {
+      return NextResponse.json({ detail: 'build placeholder', build_placeholder: true })
+    }
+
+    const [{ prisma }, { redis }] = await Promise.all([
+      import('@/lib/db/prisma'),
+      import('@/lib/redis/client'),
+    ])
+
     const body = await req.json()
     const { username, password, phone } = registerSchema.parse(body)
 

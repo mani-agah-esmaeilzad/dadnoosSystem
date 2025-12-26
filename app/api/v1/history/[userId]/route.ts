@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/guards'
 import { deserializeContent, partsToPlainText } from '@/lib/chat/messages'
+import { isBuildTime } from '@/lib/runtime/build'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest, context: { params: Promise<{ userId: string }> }) {
   try {
+    if (isBuildTime) {
+      return NextResponse.json([])
+    }
+
+    const { prisma } = await import('@/lib/db/prisma')
+
     const { userId } = await context.params
     const auth = requireAuth(req)
     if (auth.sub !== userId) {

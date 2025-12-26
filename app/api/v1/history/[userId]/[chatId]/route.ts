@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/guards'
 import { deserializeContent, summarizeParts } from '@/lib/chat/messages'
+import { isBuildTime } from '@/lib/runtime/build'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -12,6 +12,12 @@ export async function GET(
   context: { params: Promise<{ userId: string; chatId: string }> }
 ) {
   try {
+    if (isBuildTime) {
+      return NextResponse.json([])
+    }
+
+    const { prisma } = await import('@/lib/db/prisma')
+
     const { userId, chatId } = await context.params
     const auth = requireAuth(req)
     if (auth.sub !== userId) {
@@ -47,6 +53,12 @@ export async function DELETE(
   context: { params: Promise<{ userId: string; chatId: string }> }
 ) {
   try {
+    if (isBuildTime) {
+      return NextResponse.json({ message: 'build placeholder', build_placeholder: true })
+    }
+
+    const { prisma } = await import('@/lib/db/prisma')
+
     const { userId, chatId } = await context.params
     const auth = requireAuth(req)
     if (auth.sub !== userId) {

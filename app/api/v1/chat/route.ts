@@ -3,23 +3,36 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
 import { runAgent, buildAgentMessages } from '@/lib/agent/runner'
-import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/guards'
 import { chatRequestSchema } from '@/lib/chat/schema'
-import { prepareChatContext } from '@/lib/chat/context'
-import { serializeContent } from '@/lib/chat/messages'
 import { enforceRateLimit } from '@/lib/rate-limit'
 import { env } from '@/lib/env'
 import { enforceBodySizeLimit } from '@/lib/http/bodyLimit'
 import { HttpError } from '@/lib/http/errors'
 import { estimateTokensFromMessages, estimateTokensFromText } from '@/lib/llm/tokens'
-import { enforceQuota, recordUsage } from '@/lib/billing/quota'
+import { isBuildTime } from '@/lib/runtime/build'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
+    if (isBuildTime) {
+      return NextResponse.json({
+        response: 'سیستم در حال آماده‌سازی است. لطفاً بعداً دوباره تلاش کنید.',
+        build_placeholder: true,
+      })
+    }
+
+    const [{ prisma }, { prepareChatContext }, { serializeContent }, quotaModule] = await Promise.all([
+      import('@/lib/db/prisma'),
+      import('@/lib/chat/context'),
+      import('@/lib/chat/messages'),
+      import('@/lib/billing/quota'),
+    ])
+
+    const { enforceQuota, recordUsage } = quotaModule
+
     const auth = requireAuth(req)
     enforceBodySizeLimit(req, env.MAX_UPLOAD_BYTES * 2)
     await enforceRateLimit({

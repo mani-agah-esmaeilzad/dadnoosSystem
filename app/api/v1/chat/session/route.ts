@@ -1,14 +1,24 @@
 import crypto from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 
-import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/guards'
+import { isBuildTime } from '@/lib/runtime/build'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
+    if (isBuildTime) {
+      return NextResponse.json({
+        chat_id: 'build-placeholder',
+        created_at: new Date().toISOString(),
+        build_placeholder: true,
+      })
+    }
+
+    const { prisma } = await import('@/lib/db/prisma')
+
     const auth = requireAuth(req)
     for (let i = 0; i < 3; i += 1) {
       const chatId = crypto.randomUUID().replace(/-/g, '')

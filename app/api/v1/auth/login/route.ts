@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
-import { prisma } from '@/lib/db/prisma'
 import { verifyPassword } from '@/lib/auth/password'
 import { issueAccessToken, asTokenResponse } from '@/lib/auth/jwt'
+import { isBuildTime } from '@/lib/runtime/build'
 
 const loginSchema = z.object({
   username: z.string().min(3),
@@ -15,6 +15,12 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
+    if (isBuildTime) {
+      return NextResponse.json({ detail: 'build placeholder', build_placeholder: true })
+    }
+
+    const { prisma } = await import('@/lib/db/prisma')
+
     const body = await req.json()
     const { username, password } = loginSchema.parse(body)
 
