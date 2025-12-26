@@ -56,32 +56,48 @@ export async function POST(req: NextRequest) {
     } else if (env.OTP_BYPASS_IN_DEV && env.OTP_ACCEPT_MASTER_CODE && trimmedCode === env.OTP_FIXED_CODE) {
       verified = true
     } else {
-      const realCode = await redis.get(otpKey(normalized))
+      let realCode: string | null = null
+      try {
+        realCode = await redis.get(otpKey(normalized))
+      } catch (error) {
+        console.error('OTP verify redis error:', (error as Error).message)
+        return NextResponse.json(
+          { detail: 'سرویس تایید کد موقتا در دسترس نیست. لطفاً دوباره تلاش کنید.' },
+          { status: 503 }
+        )
+      }
       if (!realCode) {
         return NextResponse.json({ detail: 'کد منقضی شده یا درخواستی ثبت نشده است.' }, { status: 400 })
       }
 
-      const attemptsRaw = await redis.get(otpAttemptsKey(normalized))
+      let attemptsRaw: string | null = null
+      try {
+        attemptsRaw = await redis.get(otpAttemptsKey(normalized))
+      } catch (error) {
+        console.error('OTP attempts redis error:', (error as Error).message)
+      }
       const attemptsLeft = attemptsRaw ? parseInt(attemptsRaw, 10) : env.OTP_MAX_ATTEMPTS
       if (attemptsLeft <= 0) {
-        await redis.del(otpKey(normalized), otpAttemptsKey(normalized))
+        await redis.del(otpKey(normalized), otpAttemptsKey(normalized)).catch(() => {})
         return NextResponse.json({ detail: 'تعداد تلاش‌ها به پایان رسیده است.' }, { status: 429 })
       }
 
       if (realCode.trim() !== trimmedCode) {
-        await redis.decr(otpAttemptsKey(normalized))
+        await redis.decr(otpAttemptsKey(normalized)).catch(() => {})
         return NextResponse.json({ detail: 'کد نادرست است.' }, { status: 401 })
       }
 
       verified = true
-      await redis.del(otpKey(normalized), otpAttemptsKey(normalized))
+      await redis.del(otpKey(normalized), otpAttemptsKey(normalized)).catch(() => {})
     }
 
     if (!verified) {
       return NextResponse.json({ detail: 'کد نادرست است.' }, { status: 401 })
     }
 
-    await redis.setex(otpVerifiedKey(normalized), 600, '1')
+    await redis.setex(otpVerifiedKey(normalized), 600, '1').catch((error) => {
+      console.warn('OTP verified flag could not be stored:', (error as Error).message)
+    })
 
     const user = await ensureUser(normalized)
     const issued = issueAccessToken({ sub: user.id })

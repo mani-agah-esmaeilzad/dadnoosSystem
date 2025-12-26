@@ -9,8 +9,9 @@ const globalForRedis = globalThis as unknown as {
 export const redis =
   globalForRedis.redis ||
   new Redis(env.REDIS_URL, {
-    maxRetriesPerRequest: 2,
-    lazyConnect: false,
+    maxRetriesPerRequest: 1,
+    lazyConnect: true,
+    enableOfflineQueue: false,
   })
 
 if (process.env.NODE_ENV !== 'production') {

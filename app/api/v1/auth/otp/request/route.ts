@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { env } from '@/lib/env'
 import { generateOtpCode, isValidPhone, normalizePhone, otpAttemptsKey, otpCooldownKey, otpKey } from '@/lib/auth/otp'
 import { redis } from '@/lib/redis/client'
+import { isBuildTime } from '@/lib/runtime/build'
 import { enforceRateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/http/request'
 import { sendOtp, MeliPayamakError } from '@/lib/integrations/melipayamak'
@@ -17,6 +18,18 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
+    if (isBuildTime) {
+      return NextResponse.json({
+        sent: true,
+        provider: 'dev',
+        request_id: 'BUILD-MODE',
+        expires_in: env.OTP_TTL_SECONDS,
+        cooldown: env.OTP_COOLDOWN_SECONDS,
+        dev_code: env.OTP_FIXED_CODE,
+        build_placeholder: true,
+      })
+    }
+
     const body = await req.json()
     const { phone } = requestSchema.parse(body)
     const normalized = normalizePhone(phone)
@@ -77,12 +90,25 @@ export async function POST(req: NextRequest) {
       code = code || generateOtpCode()
     }
 
-    await redis.multi()
-      .setex(otpKey(normalized), ttl, code)
-      .setex(otpAttemptsKey(normalized), ttl, attempts.toString())
-      .exec()
+    const requireRedis = !(env.OTP_DEV_MODE || env.OTP_BYPASS_IN_DEV)
 
-    await redis.setex(otpCooldownKey(normalized), env.OTP_COOLDOWN_SECONDS, '1')
+    try {
+      await redis
+        .multi()
+        .setex(otpKey(normalized), ttl, code)
+        .setex(otpAttemptsKey(normalized), ttl, attempts.toString())
+        .exec()
+
+      await redis.setex(otpCooldownKey(normalized), env.OTP_COOLDOWN_SECONDS, '1')
+    } catch (error) {
+      console.error('OTP redis error:', (error as Error).message)
+      if (requireRedis) {
+        return NextResponse.json(
+          { detail: 'سرویس ارسال کد موقتا در دسترس نیست. لطفاً دقایقی بعد تلاش کنید.' },
+          { status: 503 }
+        )
+      }
+    }
 
     return NextResponse.json({
       sent,

@@ -19,20 +19,30 @@ export async function enforceRateLimit({
   limit: number
   windowSeconds: number
 }) {
-  const count = await redis.incr(key)
-  if (count === 1) {
-    await redis.expire(key, windowSeconds)
-  }
+  try {
+    const count = await redis.incr(key)
+    if (count === 1) {
+      await redis.expire(key, windowSeconds)
+    }
 
-  if (count > limit) {
+    if (count > limit) {
+      const ttl = await redis.ttl(key)
+      throw new RateLimitError('Too many requests. Please try again later.', ttl >= 0 ? ttl : undefined)
+    }
+
     const ttl = await redis.ttl(key)
-    throw new RateLimitError('Too many requests. Please try again later.', ttl >= 0 ? ttl : undefined)
-  }
-
-  const ttl = await redis.ttl(key)
-  return {
-    remaining: Math.max(0, limit - count),
-    resetSeconds: ttl,
-    count,
+    return {
+      remaining: Math.max(0, limit - count),
+      resetSeconds: ttl,
+      count,
+    }
+  } catch (error) {
+    console.warn('Rate limit skipped due to Redis error:', (error as Error).message)
+    return {
+      remaining: limit,
+      resetSeconds: windowSeconds,
+      count: 0,
+      skipped: true,
+    }
   }
 }
