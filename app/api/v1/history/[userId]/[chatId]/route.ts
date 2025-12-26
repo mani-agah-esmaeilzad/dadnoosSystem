@@ -7,15 +7,19 @@ import { deserializeContent, summarizeParts } from '@/lib/chat/messages'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-export async function GET(req: NextRequest, { params }: { params: { userId: string; chatId: string } }) {
+export async function GET(
+  req: NextRequest,
+  context: { params: Promise<{ userId: string; chatId: string }> }
+) {
   try {
+    const { userId, chatId } = await context.params
     const auth = requireAuth(req)
-    if (auth.sub !== params.userId) {
+    if (auth.sub !== userId) {
       return NextResponse.json({ detail: 'Forbidden' }, { status: 403 })
     }
 
     const messages = await prisma.message.findMany({
-      where: { userId: auth.sub, chatId: params.chatId },
+      where: { userId: auth.sub, chatId },
       orderBy: { timestamp: 'asc' },
     })
 
@@ -38,16 +42,20 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { userId: string; chatId: string } }) {
+export async function DELETE(
+  req: NextRequest,
+  context: { params: Promise<{ userId: string; chatId: string }> }
+) {
   try {
+    const { userId, chatId } = await context.params
     const auth = requireAuth(req)
-    if (auth.sub !== params.userId) {
+    if (auth.sub !== userId) {
       return NextResponse.json({ detail: 'Forbidden' }, { status: 403 })
     }
 
-    await prisma.chatAttachment.deleteMany({ where: { userId: auth.sub, chatId: params.chatId } })
-    await prisma.message.deleteMany({ where: { userId: auth.sub, chatId: params.chatId } })
-    await prisma.chatSession.deleteMany({ where: { userId: auth.sub, chatId: params.chatId } })
+    await prisma.chatAttachment.deleteMany({ where: { userId: auth.sub, chatId } })
+    await prisma.message.deleteMany({ where: { userId: auth.sub, chatId } })
+    await prisma.chatSession.deleteMany({ where: { userId: auth.sub, chatId } })
 
     return NextResponse.json({ message: 'Chat deleted.' })
   } catch (error) {

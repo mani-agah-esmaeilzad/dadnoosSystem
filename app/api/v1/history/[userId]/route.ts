@@ -7,10 +7,11 @@ import { deserializeContent, partsToPlainText } from '@/lib/chat/messages'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-export async function GET(req: NextRequest, { params }: { params: { userId: string } }) {
+export async function GET(req: NextRequest, context: { params: Promise<{ userId: string }> }) {
   try {
+    const { userId } = await context.params
     const auth = requireAuth(req)
-    if (auth.sub !== params.userId) {
+    if (auth.sub !== userId) {
       return NextResponse.json({ detail: 'Forbidden' }, { status: 403 })
     }
 

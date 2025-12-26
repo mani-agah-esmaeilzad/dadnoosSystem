@@ -9,23 +9,27 @@ const bodySchema = z.object({ title: z.string().min(1) })
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-export async function PATCH(req: NextRequest, { params }: { params: { userId: string; chatId: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  context: { params: Promise<{ userId: string; chatId: string }> }
+) {
   try {
+    const { userId, chatId } = await context.params
     const auth = requireAuth(req)
-    if (auth.sub !== params.userId) {
+    if (auth.sub !== userId) {
       return NextResponse.json({ detail: 'Forbidden' }, { status: 403 })
     }
     const body = bodySchema.parse(await req.json())
 
     const existing = await prisma.chatSession.findUnique({
-      where: { userId_chatId: { userId: auth.sub, chatId: params.chatId } },
+      where: { userId_chatId: { userId: auth.sub, chatId } },
     })
     if (!existing) {
       return NextResponse.json({ detail: 'Chat not found' }, { status: 404 })
     }
 
     const updated = await prisma.chatSession.update({
-      where: { userId_chatId: { userId: auth.sub, chatId: params.chatId } },
+      where: { userId_chatId: { userId: auth.sub, chatId } },
       data: { title: body.title.trim() },
     })
 
