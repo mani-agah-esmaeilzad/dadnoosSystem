@@ -30,7 +30,8 @@ export async function GET(req: NextRequest, context: { params: Promise<{ path: s
 
   try {
     const data = await fs.promises.readFile(filePath)
-    const blob = new Blob([data])
+    const arrayBuffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer
+    const blob = new Blob([arrayBuffer])
     return new NextResponse(blob, {
       status: 200,
       headers: {

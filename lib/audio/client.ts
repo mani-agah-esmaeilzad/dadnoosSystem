@@ -29,7 +29,8 @@ export async function transcribeAudio({
   const form = new FormData()
   const model = env.TRANSCRIPTION_MODEL || 'gpt-4o-transcribe'
   form.append('model', model)
-  form.append('file', new Blob([buffer], { type: mimeType }), 'audio')
+  const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer
+  form.append('file', new Blob([arrayBuffer], { type: mimeType }), 'audio')
   if (env.TRANSCRIPTION_LANGUAGE) {
     form.append('language', env.TRANSCRIPTION_LANGUAGE)
   }
