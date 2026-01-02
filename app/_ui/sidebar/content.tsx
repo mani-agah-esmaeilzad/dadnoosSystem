@@ -62,6 +62,7 @@ import ContactModal from "@/app/_ui/sidebar/contactModal"
 import RecentChats from "@/app/_ui/sidebar/recentChats"
 import Image from "next/image"
 import Link from "next/link"
+import { useSavedMessagesStore } from "@/app/_lib/hooks/useSavedMessages"
 
 interface SidebarProps {
   isMobile: boolean
@@ -89,6 +90,7 @@ interface SidebarProps {
   setIsUploadModalOpen: (open: boolean) => void
   handleContractUpload: (file: File, type: 'contract' | 'document') => void
   onStartChatWithPrompt: any
+  onOpenFileManager: () => void
 }
 
 const advisorySuggestions = [
@@ -160,6 +162,7 @@ export default function SidebarContent({
   isUploadModalOpen,
   setIsUploadModalOpen,
   handleContractUpload,
+  onOpenFileManager,
 }: SidebarProps) {
   const router = useRouter()
   const user = useUserStore((state) => state.user)
@@ -196,6 +199,7 @@ export default function SidebarContent({
 
   const [isOpenContactModal, setIsOpenContactModal] = useState(false)
   const toggleContactModal = () => setIsOpenContactModal(prev => !prev)
+  const savedFiles = useSavedMessagesStore((state) => state.files)
 
   return (
     <>
@@ -308,14 +312,23 @@ export default function SidebarContent({
             <Button
               variant="ghost"
               className="w-full justify-between pr-3 pl-2 h-auto mt-2"
-              onClick={() => toggleSection('case-management')}
-              disabled
+              onClick={() => {
+                if (isMobile) onToggle()
+                onOpenFileManager()
+              }}
             >
               <div className="flex items-center gap-3">
                 <FolderOpen className="size-6" />
-                <h3>مدیریت پرونده</h3>
+                <div className="flex flex-col text-right">
+                  <h3>مدیریت پرونده</h3>
+                  <span className="text-xs text-neutral-500">
+                    {savedFiles.length === 0
+                      ? 'هنوز پرونده‌ای ذخیره نشده'
+                      : `${savedFiles.length} پرونده ذخیره شده`}
+                  </span>
+                </div>
               </div>
-              <ComingSoon />
+              <HardDriveDownload className="size-5 text-neutral-500" />
             </Button>
           </div>
 

@@ -12,9 +12,8 @@ import { cn } from '@/app/_lib/utils'
 import PricingButton from '@/app/_ui/pricing/pricing-button'
 import type { QueuedPrompt } from '@/app/_lib/hooks/useChat'
 import ChatInput from '@/app/_ui/chat/chatInputBar'
-import { ArrowDown, FolderOpen } from 'lucide-react'
+import { ArrowDown } from 'lucide-react'
 import { useSavedMessagesStore } from '@/app/_lib/hooks/useSavedMessages'
-import { Button } from '@/app/_ui/components/button'
 import { SavedMessagesManager } from '@/app/_ui/chat/savedMessagesManager'
 
 const defaultSuggestions = [
@@ -65,6 +64,9 @@ interface ChatInterfaceProps {
   setShouldResetAudio?: any
   errorMessage?: any
   chatContainerRef: any
+  isFileManagerOpen: boolean
+  onOpenFileManager: () => void
+  onCloseFileManager: () => void
 }
 
 export default function ChatInterface({
@@ -87,7 +89,10 @@ export default function ChatInterface({
   shouldResetAudio,
   setShouldResetAudio,
   chatContainerRef,
-  onStartChatWithPrompt
+  onStartChatWithPrompt,
+  isFileManagerOpen,
+  onOpenFileManager,
+  onCloseFileManager
 }: ChatInterfaceProps) {
   const isMobile = useIsMobile()
   const [fontSize, setFontSize] = useState(15)
@@ -95,14 +100,12 @@ export default function ChatInterface({
   const [promptHeight, setPromptHeight] = useState(0)
   const [isUploadPanelOpen, setIsUploadPanelOpen] = useState(false)
   const [showScrollButton, setShowScrollButton] = useState(false)
-  const [isFileManagerOpen, setIsFileManagerOpen] = useState(false)
 
   const hasQueuedPrompts = queuedPrompts.length > 0
 
   const lastDistance = useRef<number | null>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const promptContainerRef = useRef<HTMLDivElement>(null)
-  const savedFiles = useSavedMessagesStore((state) => state.files)
   const addSavedFile = useSavedMessagesStore((state) => state.addFile)
 
   useEffect(() => {
@@ -222,7 +225,7 @@ export default function ChatInterface({
       content: message.text.trim(),
     })
 
-    setIsFileManagerOpen(true)
+    onOpenFileManager()
   }
 
   return (
@@ -366,17 +369,6 @@ export default function ChatInterface({
               setIsUploadPanelOpen={setIsUploadPanelOpen}
             />
 
-            <div className="flex justify-end px-3 sm:px-6 pt-3">
-              <Button
-                variant="ghost"
-                className="gap-2 rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-700 px-4 py-2 text-sm"
-                onClick={() => setIsFileManagerOpen(true)}
-              >
-                <FolderOpen className="size-4" />
-                فایل‌های ذخیره‌شده ({savedFiles.length})
-              </Button>
-            </div>
-
             <UploadPanel
               isOpen={isUploadPanelOpen}
               onClose={() => setIsUploadPanelOpen(false)}
@@ -386,7 +378,7 @@ export default function ChatInterface({
 
             <SavedMessagesManager
               isOpen={isFileManagerOpen}
-              onClose={() => setIsFileManagerOpen(false)}
+              onClose={onCloseFileManager}
             />
           </footer>
         </div>

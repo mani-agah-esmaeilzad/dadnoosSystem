@@ -11,6 +11,7 @@ import {
   Paragraph,
   TextRun,
   PageTextDirectionType,
+  AlignmentType,
 } from 'docx'
 
 interface SavedMessagesManagerProps {
@@ -175,6 +176,7 @@ function textToParagraphs(text: string) {
       new Paragraph({
         children: [new TextRun(text || '')],
         bidirectional: true,
+        alignment: AlignmentType.RIGHT,
       }),
     ]
   }
@@ -190,6 +192,7 @@ function textToParagraphs(text: string) {
           })
         }),
         bidirectional: true,
+        alignment: AlignmentType.RIGHT,
       }),
   )
 }

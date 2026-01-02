@@ -18,6 +18,7 @@ export default function C() {
   const { user, updateUser, removeUser } = useUserStore()
   const [isAuthenticating, setIsAuthenticating] = useState(true)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [isFileManagerOpen, setIsFileManagerOpen] = useState(false)
 
   useEffect(() => {
     setSidebarCollapsed(isMobile)
@@ -111,6 +112,7 @@ export default function C() {
         useIsMobile={useIsMobile}
         collapsed={sidebarCollapsed}
         chatContainerRef={chatContainerRef}
+        onOpenFileManager={() => setIsFileManagerOpen(true)}
         onGoToMainPage={handleGoToMainPage}
         onLoadConversation={loadConversation}
         onContractUpload={handleContractUpload}
@@ -145,6 +147,9 @@ export default function C() {
         onRemoveQueuedPrompt={removeQueuedPrompt}
         onContractUpload={handleContractUpload}
         onStartChatWithPrompt={startChatWithPrompt}
+        isFileManagerOpen={isFileManagerOpen}
+        onOpenFileManager={() => setIsFileManagerOpen(true)}
+        onCloseFileManager={() => setIsFileManagerOpen(false)}
       />
 
       <Introduction

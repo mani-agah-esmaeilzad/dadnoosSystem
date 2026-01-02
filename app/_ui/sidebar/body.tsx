@@ -41,6 +41,7 @@ interface SidebarProps {
   setIsUploadModalOpen: (open: boolean) => void
   handleContractUpload: (file: File, type: 'contract' | 'document') => void
   onStartChatWithPrompt: any
+  onOpenFileManager: () => void
 }
 
 export default function SidebarBody(props: SidebarProps) {
@@ -70,7 +71,7 @@ export default function SidebarBody(props: SidebarProps) {
         )}
         >
 
-          <SidebarContent {...sharedProps} />
+      <SidebarContent {...sharedProps} />
 
           <div className='absolute bottom-0 w-full h-8 bg-gradient-to-t from-white dark:from-background md:dark:from-[#191919] from-30%' />
         </div>

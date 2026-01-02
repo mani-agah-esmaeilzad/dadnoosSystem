@@ -29,6 +29,7 @@ interface SidebarProps {
   onStartChatWithPrompt: any
   onContractUpload: (file: File, type: 'contract' | 'document') => void
   chatContainerRef: any
+  onOpenFileManager: () => void
 }
 
 export default function Sidebar({
@@ -41,7 +42,8 @@ export default function Sidebar({
   onStartNewConversation,
   onStartChatWithPrompt,
   onContractUpload,
-  chatContainerRef
+  chatContainerRef,
+  onOpenFileManager
 }: SidebarProps) {
 
   const [expandedSections, setExpandedSections] = useState<string[]>(['templates', 'legal-templates'])
@@ -292,6 +294,7 @@ export default function Sidebar({
         handleFormSubmit={handleFormSubmit}
         onStartChatWithPrompt={onStartChatWithPrompt}
         handleContractUpload={handleContractUpload}
+        onOpenFileManager={onOpenFileManager}
       />
     </>
   )
