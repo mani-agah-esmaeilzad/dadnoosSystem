@@ -26,6 +26,7 @@ model ChatSession {
   user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages    Message[]
   attachments ChatAttachment[]
+  summary     ChatSummary?
 
   @@id([userId, chatId])
   @@index([userId, createdAt], map: "ix_chatsessions_user_created")
@@ -37,11 +38,28 @@ model Message {
   chatId    String
   role      String
   content   String
+  tokenCount Int      @default(0)
   timestamp DateTime  @default(now())
 
   session ChatSession @relation(fields: [userId, chatId], references: [userId, chatId], onDelete: Cascade)
 
   @@index([userId, chatId, timestamp], map: "ix_messages_user_chat_ts")
+}
+
+model ChatSummary {
+  id                      String    @id @default(uuid())
+  userId                  String
+  chatId                  String
+  summaryJson             Json
+  summaryText             String    @db.Text
+  summaryVersion          Int       @default(1)
+  summarizedUpToMessageId String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  session ChatSession @relation(fields: [userId, chatId], references: [userId, chatId], onDelete: Cascade)
+
+  @@unique([userId, chatId])
 }
 
 model Document {

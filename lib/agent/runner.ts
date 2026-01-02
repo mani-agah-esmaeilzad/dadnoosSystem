@@ -21,6 +21,7 @@ export interface AgentMetadata {
 export interface RunAgentInput {
   message: string
   history?: ConversationTurn[]
+  summaryJson?: string
   metadata?: AgentMetadata
 }
 
@@ -64,8 +65,20 @@ function formatMetadata(metadata?: AgentMetadata) {
   return `\n\n[اطلاعات کمکی]\n${parts.join('\n\n')}`
 }
 
-export function buildAgentMessages(history: ConversationTurn[], message: string, metadata?: AgentMetadata): LlmMessage[] {
+export function buildAgentMessages(
+  history: ConversationTurn[],
+  message: string,
+  metadata?: AgentMetadata,
+  summaryJson?: string
+): LlmMessage[] {
   const llmMessages: LlmMessage[] = [{ role: 'system', content: SYSTEM_PROMPT }]
+
+  if (summaryJson) {
+    llmMessages.push({
+      role: 'system',
+      content: `CONVERSATION_SUMMARY_JSON:\n${summaryJson}`,
+    })
+  }
 
   history.forEach((turn) => {
     if (turn.role === 'user' || turn.role === 'assistant') {
@@ -77,8 +90,8 @@ export function buildAgentMessages(history: ConversationTurn[], message: string,
   return llmMessages
 }
 
-export async function runAgent({ message, history = [], metadata }: RunAgentInput): Promise<RunAgentResult> {
-  const llmMessages = buildAgentMessages(history, message, metadata)
+export async function runAgent({ message, history = [], metadata, summaryJson }: RunAgentInput): Promise<RunAgentResult> {
+  const llmMessages = buildAgentMessages(history, message, metadata, summaryJson)
 
   const text = await createChatCompletion({ messages: llmMessages })
   return { text }

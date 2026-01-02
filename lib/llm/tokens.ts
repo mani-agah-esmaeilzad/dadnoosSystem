@@ -1,12 +1,14 @@
 import type { LlmMessage } from '@/lib/llm/client'
-
-const CHARS_PER_TOKEN = 4
+import { countTokens } from '@/lib/llm/tokenizer'
 
 export function estimateTokensFromText(text: string) {
-  const normalized = text || ''
-  return Math.max(1, Math.ceil(normalized.length / CHARS_PER_TOKEN))
+  const tokens = countTokens(text || '')
+  return tokens > 0 ? tokens : 1
 }
 
 export function estimateTokensFromMessages(messages: LlmMessage[]) {
-  return messages.reduce((sum, msg) => sum + estimateTokensFromText(msg.content), 0)
+  return messages.reduce((sum, msg) => {
+    const contentTokens = countTokens(msg.content || '')
+    return sum + Math.max(contentTokens, 1)
+  }, 0)
 }

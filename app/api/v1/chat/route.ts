@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     const metadata = prepared.attachmentContext.length
       ? { attachments: prepared.attachmentContext }
       : undefined
-    const agentMessages = buildAgentMessages(prepared.history, prepared.userPlainText, metadata)
+    const agentMessages = buildAgentMessages(prepared.history, prepared.userPlainText, metadata, prepared.summaryJson || undefined)
     const estimatedPromptTokens = estimateTokensFromMessages(agentMessages)
 
     await enforceQuota(auth.sub, estimatedPromptTokens)
@@ -56,6 +56,7 @@ export async function POST(req: NextRequest) {
     const agent = await runAgent({
       message: prepared.userPlainText,
       history: prepared.history,
+      summaryJson: prepared.summaryJson || undefined,
       metadata,
     })
 
@@ -69,6 +70,7 @@ export async function POST(req: NextRequest) {
         chatId: prepared.sessionChatId,
         role: 'assistant',
         content: serializeContent([{ type: 'text', text: agent.text }]),
+        tokenCount: assistantTokens,
       },
     })
 

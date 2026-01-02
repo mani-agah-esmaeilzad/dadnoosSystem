@@ -4,9 +4,11 @@ import { prisma } from '@/lib/db/prisma'
 import { saveDocumentBase64, saveImageBase64 } from '@/lib/files/storage'
 import { extractAttachmentSummary } from '@/lib/attachments/extract'
 import type { ChatRequestInput } from '@/lib/chat/schema'
-import { ContentPart, deserializeContent, partsToPlainText, serializeContent } from '@/lib/chat/messages'
+import { ContentPart, partsToPlainText, serializeContent } from '@/lib/chat/messages'
 import { HttpError } from '@/lib/http/errors'
 import type { ConversationTurn } from '@/lib/agent/runner'
+import { estimateTokensFromText } from '@/lib/llm/tokens'
+import { buildConversationMemory } from '@/lib/chat/memory'
 
 const ATTACHMENT_CONTEXT_LIMIT = 5
 const FALLBACK_ATTACHMENT_NOTE = 'متن استخراج نشد.'
@@ -23,6 +25,7 @@ export interface PreparedChatContext {
   history: ConversationTurn[]
   userPlainText: string
   attachmentContext: AttachmentMeta[]
+  summaryJson: string | null
 }
 
 function ensureParts(parts: ContentPart[]) {
@@ -50,11 +53,6 @@ export async function prepareChatContext(userId: string, body: ChatRequestInput)
     where: { userId_chatId: { userId, chatId: body.chat_id } },
     update: {},
     create: { userId, chatId: body.chat_id },
-  })
-
-  const existingMessages = await prisma.message.findMany({
-    where: { userId, chatId: body.chat_id },
-    orderBy: { timestamp: 'asc' },
   })
 
   const parts: ContentPart[] = []
@@ -106,25 +104,31 @@ export async function prepareChatContext(userId: string, body: ChatRequestInput)
 
   ensureParts(parts)
 
-  await prisma.message.create({
+  const plainText = partsToPlainText(parts)
+  const userTokenCount = estimateTokensFromText(plainText)
+
+  const latestMessage = await prisma.message.create({
     data: {
       id: crypto.randomUUID(),
       userId,
       chatId: body.chat_id,
       role: 'user',
       content: serializeContent(parts),
+      tokenCount: userTokenCount,
     },
   })
 
-  const history: ConversationTurn[] = existingMessages.map((msg) => ({
-    role: msg.role === 'assistant' ? 'assistant' : 'user',
-    content: partsToPlainText(deserializeContent(msg.content)),
-  }))
+  const memory = await buildConversationMemory({
+    userId,
+    chatId: body.chat_id,
+    excludeMessageId: latestMessage.id,
+  })
 
   return {
     sessionChatId: session.chatId,
-    history,
-    userPlainText: partsToPlainText(parts),
+    history: memory.history,
+    userPlainText: plainText,
+    summaryJson: memory.summaryJson,
     attachmentContext: await summarizeAttachments(userId, session.chatId),
   }
 }

@@ -42,6 +42,12 @@ const envSchema = z.object({
   TTS_MODEL: z.string().optional(),
   TTS_DEFAULT_VOICE: z.string().optional(),
   AUDIO_STUB_MODE: z.coerce.boolean().default(false),
+  SUMMARY_ENABLED: z.coerce.boolean().default(true),
+  SUMMARY_TOKEN_THRESHOLD: z.coerce.number().int().positive().default(18000),
+  SUMMARY_KEEP_LAST_MESSAGES: z.coerce.number().int().positive().default(5),
+  SUMMARY_TARGET_TOKENS: z.coerce.number().int().positive().default(1200),
+  SUMMARY_MAX_INPUT_MESSAGES: z.coerce.number().int().positive().default(100),
+  SUMMARY_MODEL: z.string().optional(),
 })
 
 export type AppEnv = z.infer<typeof envSchema>
@@ -92,6 +98,12 @@ const rawEnv = {
   TTS_MODEL: sanitize(process.env.TTS_MODEL),
   TTS_DEFAULT_VOICE: sanitize(process.env.TTS_DEFAULT_VOICE),
   AUDIO_STUB_MODE: sanitize(process.env.AUDIO_STUB_MODE),
+  SUMMARY_ENABLED: sanitize(process.env.SUMMARY_ENABLED),
+  SUMMARY_TOKEN_THRESHOLD: sanitize(process.env.SUMMARY_TOKEN_THRESHOLD),
+  SUMMARY_KEEP_LAST_MESSAGES: sanitize(process.env.SUMMARY_KEEP_LAST_MESSAGES),
+  SUMMARY_TARGET_TOKENS: sanitize(process.env.SUMMARY_TARGET_TOKENS),
+  SUMMARY_MAX_INPUT_MESSAGES: sanitize(process.env.SUMMARY_MAX_INPUT_MESSAGES),
+  SUMMARY_MODEL: sanitize(process.env.SUMMARY_MODEL),
 }
 
 const buildFallbacks: Record<string, string> = {
@@ -126,6 +138,11 @@ const buildFallbacks: Record<string, string> = {
   TTS_MODEL: 'gpt-4o-mini-tts',
   TTS_DEFAULT_VOICE: 'alloy',
   AUDIO_STUB_MODE: 'true',
+  SUMMARY_ENABLED: 'true',
+  SUMMARY_TOKEN_THRESHOLD: '18000',
+  SUMMARY_KEEP_LAST_MESSAGES: '5',
+  SUMMARY_TARGET_TOKENS: '1200',
+  SUMMARY_MAX_INPUT_MESSAGES: '100',
 }
 
 const shouldAllowFallback = isBuildTime || process.env.VERCEL === '1' || process.env.ALLOW_RUNTIME_ENV_FALLBACK === '1'

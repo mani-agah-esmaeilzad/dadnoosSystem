@@ -36,13 +36,15 @@ export async function createChatCompletion({
   messages,
   temperature = DEFAULT_TEMPERATURE,
   maxTokens,
+  model,
 }: {
   messages: LlmMessage[]
   temperature?: number
   maxTokens?: number
+  model?: string
 }) {
   const res = await postJson('/chat/completions', {
-    model: env.LLM_MODEL,
+    model: model || env.LLM_MODEL,
     messages,
     temperature,
     max_tokens: maxTokens,
