@@ -7,6 +7,7 @@ export interface SavedMessageFile {
   title: string
   content: string
   savedAt: number
+  category: string
 }
 
 interface SavedMessagesStore {
@@ -14,6 +15,7 @@ interface SavedMessagesStore {
   addFile: (payload: Omit<SavedMessageFile, 'id' | 'savedAt'>) => SavedMessageFile
   removeFile: (id: string) => void
   renameFile: (id: string, title: string) => void
+  updateCategory: (id: string, category: string) => void
   clear: () => void
 }
 
@@ -26,6 +28,7 @@ export const useSavedMessagesStore = create<SavedMessagesStore>()(
           id: crypto.randomUUID(),
           savedAt: Date.now(),
           ...payload,
+          category: payload.category?.trim() || 'عمومی',
         }
 
         set((state) => ({
@@ -45,6 +48,12 @@ export const useSavedMessagesStore = create<SavedMessagesStore>()(
         set((state) => ({
           files: state.files.map((file) =>
             file.id === id ? { ...file, title: title.trim() || file.title } : file
+          ),
+        })),
+      updateCategory: (id, category) =>
+        set((state) => ({
+          files: state.files.map((file) =>
+            file.id === id ? { ...file, category: category.trim() || 'عمومی' } : file
           ),
         })),
       clear: () => set({ files: [] }),

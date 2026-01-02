@@ -23,8 +23,11 @@ export function SavedMessagesManager({ isOpen, onClose }: SavedMessagesManagerPr
   const files = useSavedMessagesStore((state) => state.files)
   const removeFile = useSavedMessagesStore((state) => state.removeFile)
   const renameFile = useSavedMessagesStore((state) => state.renameFile)
+  const updateCategory = useSavedMessagesStore((state) => state.updateCategory)
 
   const [titleDrafts, setTitleDrafts] = useState<Record<string, string>>({})
+  const [categoryDrafts, setCategoryDrafts] = useState<Record<string, string>>({})
+  const [selectedCategory, setSelectedCategory] = useState<string>('همه')
 
   useEffect(() => {
     if (!isOpen) return
@@ -34,6 +37,12 @@ export function SavedMessagesManager({ isOpen, onClose }: SavedMessagesManagerPr
       drafts[file.id] = file.title
     })
     setTitleDrafts(drafts)
+
+    const categoryDraftMap: Record<string, string> = {}
+    files.forEach((file) => {
+      categoryDraftMap[file.id] = file.category || 'عمومی'
+    })
+    setCategoryDrafts(categoryDraftMap)
   }, [files, isOpen])
 
   const handleRename = (id: string) => {
@@ -75,6 +84,19 @@ export function SavedMessagesManager({ isOpen, onClose }: SavedMessagesManagerPr
     saveAs(blob, `${file.title || 'پیام ذخیره‌شده'}.docx`)
   }
 
+  const categories = useMemo(() => {
+    const unique = Array.from(
+      new Set(files.map((file) => file.category || 'عمومی'))
+    )
+    unique.sort((a, b) => a.localeCompare(b, 'fa'))
+    return ['همه', ...unique]
+  }, [files])
+
+  const filteredFiles = useMemo(() => {
+    if (selectedCategory === 'همه') return files
+    return files.filter((file) => (file.category || 'عمومی') === selectedCategory)
+  }, [files, selectedCategory])
+
   const emptyState = useMemo(
     () => files.length === 0,
     [files.length],
@@ -100,13 +122,26 @@ export function SavedMessagesManager({ isOpen, onClose }: SavedMessagesManagerPr
             هنوز پیامی ذخیره نشده است. روی آیکون ذخیره پیام هوش مصنوعی بزنید تا در اینجا ببینید.
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto pr-1">
-            {files.map((file) => (
-              <div
-                key={file.id}
-                className="rounded-3xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50/70 dark:bg-neutral-900/50 p-4 flex flex-col gap-3"
-              >
-                <div className="flex items-center gap-3">
+          <>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {categories.map((category) => (
+                <Button
+                  key={category}
+                  variant={category === selectedCategory ? 'secondary' : 'ghost'}
+                  className="px-3 py-1 rounded-2xl text-xs"
+                  onClick={() => setSelectedCategory(category)}
+                >
+                  {category === 'همه' ? 'همه پرونده‌ها' : category}
+                </Button>
+              ))}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto pr-1">
+              {filteredFiles.map((file) => (
+                <div
+                  key={file.id}
+                  className="rounded-3xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50/70 dark:bg-neutral-900/50 p-4 flex flex-col gap-3"
+                >
+                  <div className="flex items-center gap-3">
                   <div className="bg-white dark:bg-neutral-800 rounded-2xl p-3 shadow-sm">
                     <FileText className="size-5 text-[#9b956d]" />
                   </div>
@@ -133,6 +168,29 @@ export function SavedMessagesManager({ isOpen, onClose }: SavedMessagesManagerPr
                   </div>
                 </div>
 
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={categoryDrafts[file.id] ?? file.category}
+                    onChange={(event) =>
+                      setCategoryDrafts((prev) => ({
+                        ...prev,
+                        [file.id]: event.target.value,
+                      }))
+                    }
+                    onBlur={() => updateCategory(file.id, categoryDrafts[file.id] ?? file.category)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.currentTarget.blur()
+                      }
+                    }}
+                    className="text-xs font-medium bg-transparent focus-visible:ring-neutral-400"
+                    placeholder="دسته‌بندی"
+                  />
+                  <span className="text-[11px] px-2 py-1 rounded-full bg-neutral-200/60 dark:bg-neutral-800/60 text-neutral-600 dark:text-neutral-200">
+                    {(file.category || 'عمومی')}
+                  </span>
+                </div>
+
                 <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed whitespace-pre-line max-h-32 overflow-hidden">
                   {file.content}
                 </p>
@@ -157,8 +215,9 @@ export function SavedMessagesManager({ isOpen, onClose }: SavedMessagesManagerPr
                   </Button>
                 </div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </Popup>

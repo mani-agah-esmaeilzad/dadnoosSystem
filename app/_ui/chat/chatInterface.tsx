@@ -15,6 +15,7 @@ import ChatInput from '@/app/_ui/chat/chatInputBar'
 import { ArrowDown } from 'lucide-react'
 import { useSavedMessagesStore } from '@/app/_lib/hooks/useSavedMessages'
 import { SavedMessagesManager } from '@/app/_ui/chat/savedMessagesManager'
+import { SaveMessageDialog } from '@/app/_ui/chat/saveMessageDialog'
 
 const defaultSuggestions = [
   'چگونه می‌توان ادعای خسارت ناشی از قرارداد را مطرح کرد؟',
@@ -100,6 +101,10 @@ export default function ChatInterface({
   const [promptHeight, setPromptHeight] = useState(0)
   const [isUploadPanelOpen, setIsUploadPanelOpen] = useState(false)
   const [showScrollButton, setShowScrollButton] = useState(false)
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false)
+  const [messageToSave, setMessageToSave] = useState<MessageType | null>(null)
+  const [defaultSaveTitle, setDefaultSaveTitle] = useState('')
+  const [defaultCategory, setDefaultCategory] = useState('عمومی')
 
   const hasQueuedPrompts = queuedPrompts.length > 0
 
@@ -218,14 +223,10 @@ export default function ChatInterface({
     })
 
     const defaultTitle = `پیام ذخیره‌شده ${formattedDate}`
-
-    addSavedFile({
-      messageId: message.id,
-      title: defaultTitle,
-      content: message.text.trim(),
-    })
-
-    onOpenFileManager()
+    setDefaultSaveTitle(defaultTitle)
+    setDefaultCategory('عمومی')
+    setMessageToSave(message)
+    setIsSaveDialogOpen(true)
   }
 
   return (
@@ -379,6 +380,28 @@ export default function ChatInterface({
             <SavedMessagesManager
               isOpen={isFileManagerOpen}
               onClose={onCloseFileManager}
+            />
+            <SaveMessageDialog
+              isOpen={isSaveDialogOpen}
+              defaultTitle={defaultSaveTitle}
+              defaultCategory={defaultCategory}
+              messageText={messageToSave?.text || ''}
+              onSubmit={({ title, category }) => {
+                if (!messageToSave) return
+                addSavedFile({
+                  messageId: messageToSave.id,
+                  title,
+                  category,
+                  content: messageToSave.text.trim(),
+                })
+                setIsSaveDialogOpen(false)
+                setMessageToSave(null)
+                onOpenFileManager()
+              }}
+              onClose={() => {
+                setIsSaveDialogOpen(false)
+                setMessageToSave(null)
+              }}
             />
           </footer>
         </div>
