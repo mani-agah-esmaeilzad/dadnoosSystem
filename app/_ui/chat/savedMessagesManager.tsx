@@ -3,7 +3,7 @@ import { Download, FileText, Trash2 } from 'lucide-react'
 import Popup from '@/app/_ui/components/popup'
 import { Button } from '@/app/_ui/components/button'
 import { Input } from '@/app/_ui/components/input'
-import { useSavedMessagesStore } from '@/app/_lib/hooks/useSavedMessages'
+import { SavedMessageFile, useSavedMessagesStore } from '@/app/_lib/hooks/useSavedMessages'
 import { saveAs } from 'file-saver'
 import {
   Document as DocxDocument,
@@ -12,6 +12,9 @@ import {
   TextRun,
   PageTextDirectionType,
   AlignmentType,
+  Header,
+  Footer,
+  ImageRun,
 } from 'docx'
 
 interface SavedMessagesManagerProps {
@@ -63,23 +66,7 @@ export function SavedMessagesManager({ isOpen, onClose }: SavedMessagesManagerPr
     const file = files.find((f) => f.id === fileId)
     if (!file) return
 
-    const paragraphs = textToParagraphs(file.content)
-
-    const doc = new DocxDocument({
-      title: file.title,
-      creator: 'Dadnoos AI',
-      sections: [
-        {
-          children: paragraphs,
-          properties: {
-            page: {
-              textDirection: PageTextDirectionType.TOP_TO_BOTTOM_RIGHT_TO_LEFT,
-            },
-          },
-        },
-      ],
-    })
-
+    const doc = await createBrandedDocument(file)
     const blob = await Packer.toBlob(doc)
     saveAs(blob, `${file.title || 'پیام ذخیره‌شده'}.docx`)
   }
@@ -224,6 +211,139 @@ export function SavedMessagesManager({ isOpen, onClose }: SavedMessagesManagerPr
   )
 }
 
+async function loadLogoImage(): Promise<Uint8Array | null> {
+  try {
+    const res = await fetch('/logo.png')
+    if (!res.ok) return null
+    const buffer = await res.arrayBuffer()
+    return new Uint8Array(buffer)
+  } catch (error) {
+    console.error('Failed to load logo for docx export:', error)
+    return null
+  }
+}
+
+async function createBrandedDocument(file: SavedMessageFile) {
+  const paragraphs = textToParagraphs(file.content)
+  const logoImage = await loadLogoImage()
+
+  const headerChildren = [
+    new Paragraph({
+      alignment: AlignmentType.RIGHT,
+      spacing: { after: 100 },
+      children: [
+        logoImage
+          ? new ImageRun({
+            data: logoImage,
+            transformation: {
+              width: 80,
+              height: 80,
+            },
+          })
+          : new TextRun({
+            text: 'Dadnoos',
+            bold: true,
+            size: 26,
+            color: '3C2F23',
+          }),
+      ],
+    }),
+  ]
+
+  const infoParagraphs = [
+    new Paragraph({
+      alignment: AlignmentType.RIGHT,
+      bidirectional: true,
+      rightToLeft: true,
+      spacing: { after: 160 },
+      children: [
+        new TextRun({
+          text: file.title || 'بدون عنوان',
+          bold: true,
+          size: 32,
+          color: '1F1F1F',
+        }),
+      ],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.RIGHT,
+      bidirectional: true,
+      rightToLeft: true,
+      spacing: { after: 80 },
+      children: [
+        new TextRun({
+          text: `دسته‌بندی: ${file.category || 'عمومی'}`,
+          size: 24,
+          color: '4B4B4B',
+        }),
+      ],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.RIGHT,
+      bidirectional: true,
+      rightToLeft: true,
+      spacing: { after: 320 },
+      children: [
+        new TextRun({
+          text: `تاریخ ذخیره‌سازی: ${formatFaDate(file.savedAt)}`,
+          size: 22,
+          color: '6B6B6B',
+        }),
+      ],
+    }),
+  ]
+
+  return new DocxDocument({
+    title: file.title,
+    creator: 'Dadnoos AI',
+    sections: [
+      {
+        headers: {
+          default: new Header({
+            children: headerChildren,
+          }),
+        },
+        footers: {
+          default: new Footer({
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [
+                  new TextRun({
+                    text: 'ساخته شده توسط سامانه حقوقی دادنوس',
+                    size: 20,
+                    color: '888888',
+                  }),
+                ],
+              }),
+            ],
+          }),
+        },
+        properties: {
+          page: {
+            textDirection: PageTextDirectionType.TOP_TO_BOTTOM_RIGHT_TO_LEFT,
+            margin: {
+              top: 720,
+              right: 720,
+              left: 720,
+              bottom: 720,
+            },
+          },
+        },
+        children: [...infoParagraphs, ...paragraphs],
+      },
+    ],
+  })
+}
+
+function formatFaDate(timestamp: number) {
+  return new Date(timestamp).toLocaleDateString('fa-IR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
+
 function textToParagraphs(text: string) {
   const blocks = text
     .split(/\n{2,}/)
@@ -236,6 +356,8 @@ function textToParagraphs(text: string) {
         children: [new TextRun(text || '')],
         bidirectional: true,
         alignment: AlignmentType.RIGHT,
+        spacing: { after: 120 },
+        rightToLeft: true,
       }),
     ]
   }
@@ -252,6 +374,8 @@ function textToParagraphs(text: string) {
         }),
         bidirectional: true,
         alignment: AlignmentType.RIGHT,
+        spacing: { after: 120 },
+        rightToLeft: true,
       }),
   )
 }
