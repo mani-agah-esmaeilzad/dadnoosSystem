@@ -28,15 +28,17 @@ interface UploadedFile {
   type?: string
 }
 
+interface ChatMessage {
+  id: string
+  text: string
+  isUser: boolean
+  timestamp: Date
+  files?: UploadedFile[]
+  isHistory?: boolean
+}
+
 interface MessageProps {
-  message: {
-    id: string
-    text: string
-    isUser: boolean
-    timestamp: Date
-    files?: UploadedFile[]
-    isHistory?: boolean
-  }
+  message: ChatMessage
   isLast: boolean
   fontSize: number
   onUpdateContent: (newContent: string) => void
@@ -46,6 +48,7 @@ interface MessageProps {
   onTypingComplete?: () => void
   retryAIMessage?: (messageId: string) => void
   errorMessage?: any
+  onSaveMessage?: (message: ChatMessage) => void
 }
 
 export function Message({
@@ -58,6 +61,7 @@ export function Message({
   onTypingComplete,
   errorMessage,
   retryAIMessage,
+  onSaveMessage,
 }: MessageProps) {
   const [copied, setCopied] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -274,9 +278,14 @@ export function Message({
             isUser={message.isUser}
             onCopy={copyToClipboard}
             onEdit={() => setIsModalOpen(true)}
-            onSave={() => console.log("Save clicked")}
+            onSave={() => {
+              if (!message.isUser) {
+                onSaveMessage?.(message)
+              }
+            }}
             onThumbsUp={() => console.log("Thumbs up")}
             onThumbsDown={() => console.log("Thumbs down")}
+            disabledSave={message.isUser}
           />
         )}
 

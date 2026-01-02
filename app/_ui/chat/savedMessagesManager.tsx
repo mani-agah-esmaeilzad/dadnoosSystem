@@ -1,0 +1,195 @@
+import { useEffect, useMemo, useState } from 'react'
+import { Download, FileText, Trash2 } from 'lucide-react'
+import Popup from '@/app/_ui/components/popup'
+import { Button } from '@/app/_ui/components/button'
+import { Input } from '@/app/_ui/components/input'
+import { useSavedMessagesStore } from '@/app/_lib/hooks/useSavedMessages'
+import { saveAs } from 'file-saver'
+import {
+  Document as DocxDocument,
+  Packer,
+  Paragraph,
+  TextRun,
+  PageTextDirectionType,
+} from 'docx'
+
+interface SavedMessagesManagerProps {
+  isOpen: boolean
+  onClose: () => void
+}
+
+export function SavedMessagesManager({ isOpen, onClose }: SavedMessagesManagerProps) {
+  const files = useSavedMessagesStore((state) => state.files)
+  const removeFile = useSavedMessagesStore((state) => state.removeFile)
+  const renameFile = useSavedMessagesStore((state) => state.renameFile)
+
+  const [titleDrafts, setTitleDrafts] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const drafts: Record<string, string> = {}
+    files.forEach((file) => {
+      drafts[file.id] = file.title
+    })
+    setTitleDrafts(drafts)
+  }, [files, isOpen])
+
+  const handleRename = (id: string) => {
+    const next = titleDrafts[id]
+    renameFile(id, next || '')
+  }
+
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleString('fa-IR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      day: '2-digit',
+      month: 'long',
+    })
+  }
+
+  const downloadAsWord = async (fileId: string) => {
+    const file = files.find((f) => f.id === fileId)
+    if (!file) return
+
+    const paragraphs = textToParagraphs(file.content)
+
+    const doc = new DocxDocument({
+      title: file.title,
+      creator: 'Dadnoos AI',
+      sections: [
+        {
+          children: paragraphs,
+          properties: {
+            page: {
+              textDirection: PageTextDirectionType.TOP_TO_BOTTOM_RIGHT_TO_LEFT,
+            },
+          },
+        },
+      ],
+    })
+
+    const blob = await Packer.toBlob(doc)
+    saveAs(blob, `${file.title || 'پیام ذخیره‌شده'}.docx`)
+  }
+
+  const emptyState = useMemo(
+    () => files.length === 0,
+    [files.length],
+  )
+
+  return (
+    <Popup visible={isOpen} onClose={onClose}>
+      <div className="flex flex-col gap-4" dir="rtl">
+        <div className="flex items-center justify-between border-b pb-3 mb-1">
+          <div>
+            <p className="text-lg font-semibold">فایل‌های ذخیره‌شده</p>
+            <p className="text-xs text-neutral-500">
+              پیام‌های AI را به فرمت Word دانلود کنید.
+            </p>
+          </div>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            بستن
+          </Button>
+        </div>
+
+        {emptyState ? (
+          <div className="rounded-3xl border border-dashed border-neutral-300 dark:border-neutral-600 px-6 py-10 text-center text-sm text-neutral-500">
+            هنوز پیامی ذخیره نشده است. روی آیکون ذخیره پیام هوش مصنوعی بزنید تا در اینجا ببینید.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto pr-1">
+            {files.map((file) => (
+              <div
+                key={file.id}
+                className="rounded-3xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50/70 dark:bg-neutral-900/50 p-4 flex flex-col gap-3"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-white dark:bg-neutral-800 rounded-2xl p-3 shadow-sm">
+                    <FileText className="size-5 text-[#9b956d]" />
+                  </div>
+                  <div className="flex-1">
+                    <Input
+                      value={titleDrafts[file.id] ?? file.title}
+                      onChange={(event) =>
+                        setTitleDrafts((prev) => ({
+                          ...prev,
+                          [file.id]: event.target.value,
+                        }))
+                      }
+                      onBlur={() => handleRename(file.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.currentTarget.blur()
+                        }
+                      }}
+                      className="text-sm font-semibold bg-transparent focus-visible:ring-neutral-400"
+                    />
+                    <p className="text-[11px] text-neutral-500 mt-1">
+                      {formatDate(file.savedAt)}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed whitespace-pre-line max-h-32 overflow-hidden">
+                  {file.content}
+                </p>
+
+                <div className="flex items-center justify-between pt-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-2 px-3 text-xs"
+                    onClick={() => downloadAsWord(file.id)}
+                  >
+                    <Download className="size-4" />
+                    دانلود Word
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-neutral-500 hover:text-red-500"
+                    onClick={() => removeFile(file.id)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Popup>
+  )
+}
+
+function textToParagraphs(text: string) {
+  const blocks = text
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean)
+
+  if (blocks.length === 0) {
+    return [
+      new Paragraph({
+        children: [new TextRun(text || '')],
+        bidirectional: true,
+      }),
+    ]
+  }
+
+  return blocks.map(
+    (block) =>
+      new Paragraph({
+        children: block.split('\n').map((line, index) => {
+          if (index === 0) return new TextRun(line)
+          return new TextRun({
+            text: line,
+            break: 1,
+          })
+        }),
+        bidirectional: true,
+      }),
+  )
+}
