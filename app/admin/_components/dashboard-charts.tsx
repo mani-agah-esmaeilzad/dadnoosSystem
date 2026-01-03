@@ -44,7 +44,7 @@ export default function DashboardCharts({ tokensPerDay, messagesPerDay, topUsers
               <LineChart data={tokensPerDay}>
                 <XAxis dataKey="date" tick={{ fontSize: 12 }} />
                 <YAxis tickFormatter={formatNumber} width={80} />
-                <Tooltip formatter={(value: number) => formatNumber(value)} />
+                <Tooltip formatter={(value) => formatNumber(typeof value === 'number' ? value : Number(value ?? 0))} />
                 <Line type="monotone" dataKey="totalTokens" stroke="#C8A175" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
@@ -64,7 +64,7 @@ export default function DashboardCharts({ tokensPerDay, messagesPerDay, topUsers
               <LineChart data={messagesPerDay}>
                 <XAxis dataKey="date" tick={{ fontSize: 12 }} />
                 <YAxis tickFormatter={formatNumber} width={60} />
-                <Tooltip formatter={(value: number) => formatNumber(value)} />
+                <Tooltip formatter={(value) => formatNumber(typeof value === 'number' ? value : Number(value ?? 0))} />
                 <Line type="monotone" dataKey="count" stroke="#4C6EF5" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
@@ -84,7 +84,7 @@ export default function DashboardCharts({ tokensPerDay, messagesPerDay, topUsers
               <BarChart data={topUsers}>
                 <XAxis dataKey="username" tick={{ fontSize: 12 }} />
                 <YAxis tickFormatter={formatNumber} width={70} />
-                <Tooltip formatter={(value: number) => formatNumber(value)} />
+                <Tooltip formatter={(value) => formatNumber(typeof value === 'number' ? value : Number(value ?? 0))} />
                 <Bar dataKey="totalTokens" fill="#12B886">
                   {topUsers.map((_, index) => (
                     <Cell key={`bar-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
@@ -118,7 +118,7 @@ export default function DashboardCharts({ tokensPerDay, messagesPerDay, topUsers
                     <Cell key={`slice-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number) => formatNumber(value)} />
+                <Tooltip formatter={(value) => formatNumber(typeof value === 'number' ? value : Number(value ?? 0))} />
               </PieChart>
             </ResponsiveContainer>
           ) : (
