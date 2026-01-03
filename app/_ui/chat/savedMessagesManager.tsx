@@ -245,6 +245,7 @@ async function createBrandedDocument(file: SavedMessageFile) {
             bold: true,
             size: 26,
             color: '3C2F23',
+            rightToLeft: true,
           }),
       ],
     }),
@@ -261,11 +262,12 @@ async function createBrandedDocument(file: SavedMessageFile) {
           bold: true,
           size: 32,
           color: '1F1F1F',
+          rightToLeft: true,
         }),
       ],
     }),
     new Paragraph({
-      alignment: AlignmentType.END,
+      alignment: AlignmentType.RIGHT,
       bidirectional: true,
       spacing: { after: 80 },
       children: [
@@ -273,11 +275,12 @@ async function createBrandedDocument(file: SavedMessageFile) {
           text: `دسته‌بندی: ${file.category || 'عمومی'}`,
           size: 24,
           color: '4B4B4B',
+          rightToLeft: true,
         }),
       ],
     }),
     new Paragraph({
-      alignment: AlignmentType.END,
+      alignment: AlignmentType.RIGHT,
       bidirectional: true,
       spacing: { after: 320 },
       children: [
@@ -285,6 +288,7 @@ async function createBrandedDocument(file: SavedMessageFile) {
           text: `تاریخ ذخیره‌سازی: ${formatFaDate(file.savedAt)}`,
           size: 22,
           color: '6B6B6B',
+          rightToLeft: true,
         }),
       ],
     }),
@@ -310,6 +314,7 @@ async function createBrandedDocument(file: SavedMessageFile) {
                     text: 'ساخته شده توسط سامانه حقوقی دادنوس',
                     size: 20,
                     color: '888888',
+                    rightToLeft: true,
                   }),
                 ],
               }),
@@ -349,7 +354,12 @@ function textToParagraphs(text: string) {
   if (blocks.length === 0) {
     return [
       new Paragraph({
-        children: [new TextRun(text || '')],
+        children: [
+          new TextRun({
+            text: text || '',
+            rightToLeft: true,
+          }),
+        ],
         bidirectional: true,
         alignment: AlignmentType.RIGHT,
         spacing: { after: 120 },
@@ -361,10 +371,15 @@ function textToParagraphs(text: string) {
     (block) =>
       new Paragraph({
         children: block.split('\n').map((line, index) => {
-          if (index === 0) return new TextRun(line)
+          if (index === 0)
+            return new TextRun({
+              text: line,
+              rightToLeft: true,
+            })
           return new TextRun({
             text: line,
             break: 1,
+            rightToLeft: true,
           })
         }),
         bidirectional: true,
