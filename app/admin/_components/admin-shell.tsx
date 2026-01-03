@@ -14,7 +14,13 @@ interface AdminShellProps {
   children: ReactNode
 }
 
-const NAV_ITEMS = [
+interface NavItem {
+  label: string
+  href: string
+  comingSoon?: boolean
+}
+
+const NAV_ITEMS: NavItem[] = [
   { label: 'داشبورد', href: '/admin' },
   { label: 'کاربران', href: '/admin/users' },
   { label: 'مصرف توکن', href: '/admin/usage' },
