@@ -7,13 +7,25 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum AdminRole {
+  SUPERADMIN
+  ADMIN
+  ANALYST
+}
+
 model User {
-  id              String            @id @default(uuid())
-  username        String            @unique
-  passwordHash    String?
-  createdAt       DateTime          @default(now())
-  sessions        ChatSession[]
-  subscriptions   UserSubscription[]
+  id                 String            @id @default(uuid())
+  username           String            @unique
+  passwordHash       String?
+  createdAt          DateTime          @default(now())
+  status             String            @default("active")
+  role               String            @default("user")
+  monthlyTokenQuota  Int               @default(100000)
+  monthlyTokenUsed   Int               @default(0)
+  sessions           ChatSession[]
+  subscriptions      UserSubscription[]
+  tokenUsage         TokenUsage[]
+  trackingEvents     TrackingEvent[]
 }
 
 model ChatSession {
@@ -134,4 +146,76 @@ model UserSubscription {
   plan SubscriptionPlan? @relation(fields: [planId], references: [id])
 
   @@index([userId], map: "ix_usersubscriptions_user")
+}
+
+model AdminUser {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  role         AdminRole  @default(ADMIN)
+  status       String     @default("active")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  sessions     AdminSession[]
+  auditLogs    AdminAuditLog[]
+}
+
+model AdminSession {
+  id           String     @id @default(uuid())
+  adminId      String
+  sessionToken String     @unique
+  createdAt    DateTime   @default(now())
+  expiresAt    DateTime
+  lastIp       String?
+  userAgent    String?
+
+  admin AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId], map: "ix_adminsession_admin")
+}
+
+model TokenUsage {
+  id             String   @id @default(uuid())
+  userId         String
+  chatId         String?
+  messageId      String?
+  module         String?
+  model          String?
+  endpoint       String?
+  promptTokens   Int      @default(0)
+  completionTokens Int    @default(0)
+  totalTokens    Int      @default(0)
+  costCents      Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TrackingEvent {
+  id        String   @id @default(uuid())
+  userId    String?
+  eventType String
+  source    String?
+  payload   Json?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([eventType, createdAt], map: "ix_tracking_event_type_time")
+}
+
+model AdminAuditLog {
+  id         String     @id @default(uuid())
+  adminId    String
+  actionType String
+  entityType String
+  entityId   String?
+  beforeJson Json?
+  afterJson  Json?
+  metaJson   Json?
+  createdAt  DateTime   @default(now())
+
+  admin AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([actionType, createdAt], map: "ix_auditlog_action_time")
 }

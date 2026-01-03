@@ -35,6 +35,7 @@ export interface ConversationPlanResult {
   metadata: ConversationMetadata
   mode: 'agent' | 'intake'
   intakeResponse?: string
+  routerDecision: ReturnType<typeof selectModule>['routerDecision']
 }
 
 const DOMAIN_LAWS: Record<string, string[]> = {
@@ -128,5 +129,6 @@ export async function planConversation({
     metadata,
     mode,
     intakeResponse,
+    routerDecision: routing.routerDecision,
   }
 }

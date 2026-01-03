@@ -48,6 +48,8 @@ const envSchema = z.object({
   SUMMARY_TARGET_TOKENS: z.coerce.number().int().positive().default(1200),
   SUMMARY_MAX_INPUT_MESSAGES: z.coerce.number().int().positive().default(100),
   SUMMARY_MODEL: z.string().optional(),
+  ADMIN_BOOTSTRAP_EMAIL: z.string().email().optional(),
+  ADMIN_BOOTSTRAP_PASSWORD: z.string().min(8).optional(),
 })
 
 export type AppEnv = z.infer<typeof envSchema>
@@ -104,6 +106,8 @@ const rawEnv = {
   SUMMARY_TARGET_TOKENS: sanitize(process.env.SUMMARY_TARGET_TOKENS),
   SUMMARY_MAX_INPUT_MESSAGES: sanitize(process.env.SUMMARY_MAX_INPUT_MESSAGES),
   SUMMARY_MODEL: sanitize(process.env.SUMMARY_MODEL),
+  ADMIN_BOOTSTRAP_EMAIL: sanitize(process.env.ADMIN_BOOTSTRAP_EMAIL),
+  ADMIN_BOOTSTRAP_PASSWORD: sanitize(process.env.ADMIN_BOOTSTRAP_PASSWORD),
 }
 
 const buildFallbacks: Record<string, string> = {
