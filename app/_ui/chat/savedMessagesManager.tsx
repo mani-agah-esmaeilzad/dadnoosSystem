@@ -265,7 +265,7 @@ async function createBrandedDocument(file: SavedMessageFile) {
       ],
     }),
     new Paragraph({
-      alignment: AlignmentType.RIGHT,
+      alignment: AlignmentType.END,
       bidirectional: true,
       spacing: { after: 80 },
       children: [
@@ -277,7 +277,7 @@ async function createBrandedDocument(file: SavedMessageFile) {
       ],
     }),
     new Paragraph({
-      alignment: AlignmentType.RIGHT,
+      alignment: AlignmentType.END,
       bidirectional: true,
       spacing: { after: 320 },
       children: [
