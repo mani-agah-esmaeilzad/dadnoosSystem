@@ -3,6 +3,16 @@ import { z } from 'zod'
 import { env } from '@/lib/env'
 import { createChatCompletion, LlmMessage } from '@/lib/llm/client'
 
+const anchorSchema = z.object({
+  message_ids: z.array(z.string()).min(1),
+  turn_range: z
+    .object({
+      from: z.number(),
+      to: z.number(),
+    })
+    .optional(),
+})
+
 export const conversationSummarySchema = z.object({
   summary_version: z.number(),
   jurisdiction: z.literal('Iran'),
@@ -12,13 +22,21 @@ export const conversationSummarySchema = z.object({
     preferences: z.array(z.string()).default([]),
     constraints: z.array(z.string()).default([]),
   }),
-  facts_confirmed: z.array(z.string()).default([]),
+  facts_confirmed: z
+    .array(
+      z.object({
+        statement: z.string(),
+        anchors: anchorSchema,
+      })
+    )
+    .default([]),
   claims_unverified: z.array(z.string()).default([]),
   timeline: z
     .array(
       z.object({
         date: z.string().nullable().default(null),
         event: z.string(),
+        anchors: anchorSchema,
       })
     )
     .default([]),
@@ -36,6 +54,7 @@ export const conversationSummarySchema = z.object({
     articles_or_laws_needing_verification: z.array(z.string()).default([]),
   }),
   last_updated_iso: z.string(),
+  summarized_up_to_message_id: z.string().nullable().optional(),
 })
 
 export type ConversationSummary = z.infer<typeof conversationSummarySchema>
@@ -47,8 +66,28 @@ export interface SummarizableMessage {
   timestamp: Date
 }
 
+const SUMMARY_SCHEMA_HINT = `
+{
+  "summary_version": number,
+  "jurisdiction": "Iran",
+  "facts_confirmed": [
+    {
+      "statement": string,
+      "anchors": { "message_ids": [string, ...], "turn_range": { "from": number, "to": number }? }
+    }
+  ],
+  "timeline": [
+    { "date": string|null, "event": string, "anchors": { "message_ids": [string, ...] } }
+  ],
+  "summarized_up_to_message_id": string
+}
+`
+
 const SUMMARIZER_SYSTEM_PROMPT =
-  'You are a summarization engine. Output ONLY valid JSON matching the provided schema. Do not add facts. If a previous summary is provided, merge and update it. Prefer brevity. Use Persian text for values where natural. Jurisdiction is Iran.'
+  'You are a summarization engine. Output ONLY valid JSON matching the provided schema. Do not add facts. Every confirmed fact and every timeline event MUST include anchors referencing the original message_ids supplied in the payload. If a previous summary is provided, merge and update it. Prefer brevity. Use Persian text for values where natural. Jurisdiction is Iran.'
+
+const SUMMARY_REPAIR_PROMPT =
+  'You are a JSON repair assistant. Fix the provided JSON so it strictly matches the required schema, keep existing facts, do not add new information, and return ONLY the repaired JSON.'
 
 export async function generateConversationSummary({
   previousSummary,
@@ -84,17 +123,50 @@ export async function generateConversationSummary({
     temperature: 0.1,
     maxTokens: env.SUMMARY_TARGET_TOKENS,
   })
+  const finalId = messages[messages.length - 1]?.id || null
 
-  let parsed: ConversationSummary
+  const parseAttempt = () => conversationSummarySchema.parse(JSON.parse(rawSummary))
+
+  let parsed: ConversationSummary | null = null
   try {
-    parsed = conversationSummarySchema.parse(JSON.parse(rawSummary))
+    parsed = parseAttempt()
   } catch (error) {
-    throw new Error(`Summarizer did not return valid JSON: ${(error as Error).message}`)
+    console.warn('Initial summary parse failed, attempting repair.', error)
+    const repaired = await createChatCompletion({
+      model: env.SUMMARY_MODEL || env.LLM_MODEL,
+      messages: [
+        { role: 'system', content: SUMMARY_REPAIR_PROMPT },
+        {
+          role: 'user',
+          content: JSON.stringify({
+            schema: SUMMARY_SCHEMA_HINT,
+            invalid_json: rawSummary,
+          }),
+        },
+      ],
+      temperature: 0,
+      maxTokens: env.SUMMARY_TARGET_TOKENS / 2,
+    })
+    try {
+      parsed = conversationSummarySchema.parse(JSON.parse(repaired))
+    } catch (finalError) {
+      throw new Error(`Summarizer did not return valid JSON after repair: ${(finalError as Error).message}`)
+    }
   }
+
+  const messageIds = new Set(messages.map((msg) => msg.id))
+  const sanitizeAnchors = (entry: { anchors: { message_ids: string[] } }) => {
+    entry.anchors.message_ids = entry.anchors.message_ids.filter((id) => messageIds.has(id))
+    return entry.anchors.message_ids.length > 0
+  }
+
+  parsed.facts_confirmed = parsed.facts_confirmed.filter((fact) => sanitizeAnchors(fact))
+  parsed.timeline = parsed.timeline.filter((item) => sanitizeAnchors(item))
 
   parsed.summary_version = targetVersion
   parsed.jurisdiction = 'Iran'
   parsed.last_updated_iso = new Date().toISOString()
+  parsed.summarized_up_to_message_id = finalId
 
   return {
     summaryObject: parsed,

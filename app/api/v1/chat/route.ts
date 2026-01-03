@@ -2,7 +2,7 @@ import crypto from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
-import { runAgent, buildAgentMessages } from '@/lib/agent/runner'
+import { runAgent, buildAgentMessages, type AgentMetadata } from '@/lib/agent/runner'
 import { requireAuth } from '@/lib/auth/guards'
 import { chatRequestSchema } from '@/lib/chat/schema'
 import { enforceRateLimit } from '@/lib/rate-limit'
@@ -11,6 +11,7 @@ import { enforceBodySizeLimit } from '@/lib/http/bodyLimit'
 import { HttpError } from '@/lib/http/errors'
 import { estimateTokensFromMessages, estimateTokensFromText } from '@/lib/llm/tokens'
 import { isBuildTime } from '@/lib/runtime/build'
+import { planConversation } from '@/lib/chat/plan'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -45,10 +46,47 @@ export async function POST(req: NextRequest) {
     const body = chatRequestSchema.parse(payload)
     const prepared = await prepareChatContext(auth.sub, body)
 
-    const metadata = prepared.attachmentContext.length
-      ? { attachments: prepared.attachmentContext }
-      : undefined
-    const agentMessages = buildAgentMessages(prepared.history, prepared.userPlainText, metadata, prepared.summaryJson || undefined)
+    const plan = await planConversation({
+      userId: auth.sub,
+      chatId: prepared.sessionChatId,
+      message: prepared.userPlainText,
+      summaryJson: prepared.summaryJson,
+      history: prepared.history,
+      sessionMetadata: prepared.sessionMetadata,
+    })
+
+    if (plan.mode === 'intake' && plan.intakeResponse) {
+      const text = plan.intakeResponse
+      const assistantTokens = estimateTokensFromText(text)
+      await prisma.message.create({
+        data: {
+          id: crypto.randomUUID(),
+          userId: auth.sub,
+          chatId: prepared.sessionChatId,
+          role: 'assistant',
+          content: serializeContent([{ type: 'text', text }]),
+          tokenCount: assistantTokens,
+        },
+      })
+      return NextResponse.json({ response: text })
+    }
+
+    const agentMetadata: AgentMetadata = {}
+    if (prepared.attachmentContext.length) {
+      agentMetadata.attachments = prepared.attachmentContext
+    }
+    if (plan.metadataNote) {
+      agentMetadata.notes = plan.metadataNote
+    }
+    const metadata = Object.keys(agentMetadata).length ? agentMetadata : undefined
+    const agentMessages = buildAgentMessages({
+      history: prepared.history,
+      message: prepared.userPlainText,
+      metadata,
+      summaryJson: prepared.summaryJson || undefined,
+      modulePrompt: plan.modulePrompt,
+      articleLookupJson: plan.articleLookupJson ?? undefined,
+    })
     const estimatedPromptTokens = estimateTokensFromMessages(agentMessages)
 
     await enforceQuota(auth.sub, estimatedPromptTokens)
@@ -58,6 +96,8 @@ export async function POST(req: NextRequest) {
       history: prepared.history,
       summaryJson: prepared.summaryJson || undefined,
       metadata,
+      modulePrompt: plan.modulePrompt,
+      articleLookupJson: plan.articleLookupJson ?? undefined,
     })
 
     const assistantTokens = estimateTokensFromText(agent.text)

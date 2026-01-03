@@ -63,64 +63,88 @@ describe('selectMessagesForSummarization', () => {
 
 describe('conversationSummarySchema', () => {
   it('accepts a valid summary payload', () => {
-    const payload = {
-      summary_version: 1,
-      jurisdiction: 'Iran',
-      domain: 'family',
-      user_profile: {
-        name_or_handle: null,
-        preferences: [],
-        constraints: [],
+  const payload = {
+    summary_version: 1,
+    jurisdiction: 'Iran',
+    domain: 'family',
+    user_profile: {
+      name_or_handle: null,
+      preferences: [],
+      constraints: [],
+    },
+    facts_confirmed: [
+      {
+        statement: 'نمونه',
+        anchors: { message_ids: ['m1'] },
       },
-      facts_confirmed: [],
-      claims_unverified: [],
-      timeline: [],
-      open_questions: [],
-      decisions_and_actions: [],
-      important_entities: {
-        people: [],
-        organizations: [],
-        places: [],
-        documents: [],
+    ],
+    claims_unverified: [],
+    timeline: [
+      {
+        date: null,
+        event: 'رویداد',
+        anchors: { message_ids: ['m1'] },
       },
-      legal_context_if_any: {
-        keywords: [],
-        articles_or_laws_verified: [],
-        articles_or_laws_needing_verification: [],
-      },
-      last_updated_iso: new Date().toISOString(),
-    }
+    ],
+    open_questions: [],
+    decisions_and_actions: [],
+    important_entities: {
+      people: [],
+      organizations: [],
+      places: [],
+      documents: [],
+    },
+    legal_context_if_any: {
+      keywords: [],
+      articles_or_laws_verified: [],
+      articles_or_laws_needing_verification: [],
+    },
+    last_updated_iso: new Date().toISOString(),
+    summarized_up_to_message_id: 'm1',
+  }
 
     expect(() => conversationSummarySchema.parse(payload)).not.toThrow()
   })
 
   it('rejects payloads without the jurisdiction field', () => {
-    const payload = {
-      summary_version: 1,
-      domain: 'civil',
-      user_profile: {
-        name_or_handle: null,
-        preferences: [],
-        constraints: [],
+  const payload = {
+    summary_version: 1,
+    domain: 'civil',
+    user_profile: {
+      name_or_handle: null,
+      preferences: [],
+      constraints: [],
+    },
+    facts_confirmed: [
+      {
+        statement: 'نمونه',
+        anchors: { message_ids: ['m1'] },
       },
-      facts_confirmed: [],
-      claims_unverified: [],
-      timeline: [],
-      open_questions: [],
-      decisions_and_actions: [],
-      important_entities: {
-        people: [],
-        organizations: [],
-        places: [],
-        documents: [],
+    ],
+    claims_unverified: [],
+    timeline: [
+      {
+        date: null,
+        event: 'رویداد',
+        anchors: { message_ids: ['m1'] },
       },
-      legal_context_if_any: {
-        keywords: [],
-        articles_or_laws_verified: [],
-        articles_or_laws_needing_verification: [],
-      },
-      last_updated_iso: new Date().toISOString(),
-    }
+    ],
+    open_questions: [],
+    decisions_and_actions: [],
+    important_entities: {
+      people: [],
+      organizations: [],
+      places: [],
+      documents: [],
+    },
+    legal_context_if_any: {
+      keywords: [],
+      articles_or_laws_verified: [],
+      articles_or_laws_needing_verification: [],
+    },
+    last_updated_iso: new Date().toISOString(),
+    summarized_up_to_message_id: 'm1',
+  }
 
     expect(() => conversationSummarySchema.parse(payload)).toThrow()
   })

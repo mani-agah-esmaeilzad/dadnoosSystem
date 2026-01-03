@@ -23,6 +23,8 @@ export interface RunAgentInput {
   history?: ConversationTurn[]
   summaryJson?: string
   metadata?: AgentMetadata
+  modulePrompt?: string
+  articleLookupJson?: string
 }
 
 export interface RunAgentResult {
@@ -65,18 +67,40 @@ function formatMetadata(metadata?: AgentMetadata) {
   return `\n\n[اطلاعات کمکی]\n${parts.join('\n\n')}`
 }
 
-export function buildAgentMessages(
-  history: ConversationTurn[],
-  message: string,
-  metadata?: AgentMetadata,
+export interface BuildAgentMessagesInput {
+  history: ConversationTurn[]
+  message: string
+  metadata?: AgentMetadata
   summaryJson?: string
-): LlmMessage[] {
+  modulePrompt?: string
+  articleLookupJson?: string
+}
+
+export function buildAgentMessages({
+  history,
+  message,
+  metadata,
+  summaryJson,
+  modulePrompt,
+  articleLookupJson,
+}: BuildAgentMessagesInput): LlmMessage[] {
   const llmMessages: LlmMessage[] = [{ role: 'system', content: SYSTEM_PROMPT }]
+
+  if (modulePrompt) {
+    llmMessages.push({ role: 'system', content: modulePrompt })
+  }
 
   if (summaryJson) {
     llmMessages.push({
       role: 'system',
       content: `CONVERSATION_SUMMARY_JSON:\n${summaryJson}`,
+    })
+  }
+
+  if (articleLookupJson) {
+    llmMessages.push({
+      role: 'system',
+      content: `ARTICLE_LOOKUP_RESULTS_JSON:\n${articleLookupJson}`,
     })
   }
 
@@ -90,8 +114,22 @@ export function buildAgentMessages(
   return llmMessages
 }
 
-export async function runAgent({ message, history = [], metadata, summaryJson }: RunAgentInput): Promise<RunAgentResult> {
-  const llmMessages = buildAgentMessages(history, message, metadata, summaryJson)
+export async function runAgent({
+  message,
+  history = [],
+  metadata,
+  summaryJson,
+  modulePrompt,
+  articleLookupJson,
+}: RunAgentInput): Promise<RunAgentResult> {
+  const llmMessages = buildAgentMessages({
+    history,
+    message,
+    metadata,
+    summaryJson,
+    modulePrompt,
+    articleLookupJson,
+  })
 
   const text = await createChatCompletion({ messages: llmMessages })
   return { text }

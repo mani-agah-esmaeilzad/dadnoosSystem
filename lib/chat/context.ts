@@ -9,6 +9,7 @@ import { HttpError } from '@/lib/http/errors'
 import type { ConversationTurn } from '@/lib/agent/runner'
 import { estimateTokensFromText } from '@/lib/llm/tokens'
 import { buildConversationMemory } from '@/lib/chat/memory'
+import { ConversationMetadata, parseConversationMetadata } from '@/lib/chat/sessionMetadata'
 
 const ATTACHMENT_CONTEXT_LIMIT = 5
 const FALLBACK_ATTACHMENT_NOTE = 'متن استخراج نشد.'
@@ -22,6 +23,7 @@ export interface AttachmentMeta {
 
 export interface PreparedChatContext {
   sessionChatId: string
+  sessionMetadata: ConversationMetadata
   history: ConversationTurn[]
   userPlainText: string
   attachmentContext: AttachmentMeta[]
@@ -126,6 +128,7 @@ export async function prepareChatContext(userId: string, body: ChatRequestInput)
 
   return {
     sessionChatId: session.chatId,
+    sessionMetadata: parseConversationMetadata(session.metadata),
     history: memory.history,
     userPlainText: plainText,
     summaryJson: memory.summaryJson,
