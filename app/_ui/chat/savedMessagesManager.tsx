@@ -10,7 +10,6 @@ import {
   Packer,
   Paragraph,
   TextRun,
-  PageTextDirectionType,
   AlignmentType,
   Header,
   Footer,
@@ -319,7 +318,6 @@ async function createBrandedDocument(file: SavedMessageFile) {
         },
         properties: {
           page: {
-            textDirection: PageTextDirectionType.TOP_TO_BOTTOM_RIGHT_TO_LEFT,
             margin: {
               top: 720,
               right: 720,
