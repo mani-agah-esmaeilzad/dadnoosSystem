@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 
 import { prisma } from '@/lib/db/prisma'
+import type { Prisma } from '@prisma/client'
 import { recordTrackingEvent } from '@/lib/tracking/events'
 
 interface AuditActionInput {
@@ -14,10 +15,11 @@ interface AuditActionInput {
 }
 
 export function buildAuditMeta(req?: NextRequest, extra?: Record<string, unknown>) {
+  const requestWithIp = req as NextRequest & { ip?: string }
   const ip =
     req?.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     req?.headers.get('x-real-ip') ||
-    req?.ip ||
+    requestWithIp?.ip ||
     undefined
   const userAgent = req?.headers.get('user-agent') || undefined
   return {
@@ -43,14 +45,14 @@ export async function logAdminAction({
         actionType,
         entityType,
         entityId: entityId ?? null,
-        beforeJson: before ? (before as object) : undefined,
-        afterJson: after ? (after as object) : undefined,
-        metaJson: meta ? meta : undefined,
+        beforeJson: before ? (before as Prisma.InputJsonValue) : undefined,
+        afterJson: after ? (after as Prisma.InputJsonValue) : undefined,
+        metaJson: meta ? (meta as Prisma.InputJsonValue) : undefined,
       },
     })
     await recordTrackingEvent({
       eventType: 'admin_action',
-      userId: entityType === 'user' ? entityId : undefined,
+      userId: entityType === 'user' && entityId ? entityId : undefined,
       source: 'admin_api',
       payload: {
         adminId,

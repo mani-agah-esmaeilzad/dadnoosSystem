@@ -98,7 +98,8 @@ export type AdminWithRole = {
 }
 
 export async function getAdminFromCookies() {
-  const token = cookies().get(ADMIN_SESSION_COOKIE)?.value
+  const cookieStore = await cookies()
+  const token = cookieStore.get(ADMIN_SESSION_COOKIE)?.value
   const session = await getAdminSession(token)
   if (!session) return null
   return session.admin

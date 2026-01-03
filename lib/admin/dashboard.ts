@@ -105,16 +105,16 @@ async function buildTokensPerDay(start: Date, end: Date) {
 async function buildMessagesPerDay(start: Date, end: Date) {
   const records = await prisma.message.findMany({
     where: {
-      createdAt: {
+      timestamp: {
         gte: start,
         lte: end,
       },
     },
-    select: { createdAt: true },
+    select: { timestamp: true },
   })
   const map = new Map<string, number>()
   for (const record of records) {
-    const key = dayKey(record.createdAt)
+    const key = dayKey(record.timestamp)
     map.set(key, (map.get(key) ?? 0) + 1)
   }
   const result: { date: string; count: number }[] = []

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db/prisma'
+import type { Prisma } from '@prisma/client'
 
 interface TrackingEventInput {
   userId?: string
@@ -18,7 +19,7 @@ export async function recordTrackingEvent({ userId, eventType, source, payload }
         userId,
         eventType,
         source,
-        payload,
+        payload: payload ? (payload as Prisma.InputJsonValue) : undefined,
       },
     })
   } catch (error) {
