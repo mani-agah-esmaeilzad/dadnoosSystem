@@ -12,7 +12,6 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@dqbd/tiktoken": "^1.0.22",
     "@ducanh2912/next-pwa": "^10.2.9",
     "@headlessui/react": "^2.2.8",
     "@hookform/resolvers": "^5.2.1",
@@ -34,6 +33,7 @@
     "docx": "^9.5.1",
     "dox": "^1.0.0",
     "file-saver": "^2.0.5",
+    "gpt-tokenizer": "^3.4.0",
     "html2canvas": "^1.4.1",
     "html2pdf.js": "^0.12.0",
     "ioredis": "^5.8.2",

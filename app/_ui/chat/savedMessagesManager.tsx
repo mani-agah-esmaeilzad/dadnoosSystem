@@ -235,6 +235,7 @@ async function createBrandedDocument(file: SavedMessageFile) {
         logoImage
           ? new ImageRun({
             data: logoImage,
+            type: 'png',
             transformation: {
               width: 80,
               height: 80,
@@ -254,7 +255,6 @@ async function createBrandedDocument(file: SavedMessageFile) {
     new Paragraph({
       alignment: AlignmentType.RIGHT,
       bidirectional: true,
-      rightToLeft: true,
       spacing: { after: 160 },
       children: [
         new TextRun({
@@ -268,7 +268,6 @@ async function createBrandedDocument(file: SavedMessageFile) {
     new Paragraph({
       alignment: AlignmentType.RIGHT,
       bidirectional: true,
-      rightToLeft: true,
       spacing: { after: 80 },
       children: [
         new TextRun({
@@ -281,7 +280,6 @@ async function createBrandedDocument(file: SavedMessageFile) {
     new Paragraph({
       alignment: AlignmentType.RIGHT,
       bidirectional: true,
-      rightToLeft: true,
       spacing: { after: 320 },
       children: [
         new TextRun({
@@ -357,7 +355,6 @@ function textToParagraphs(text: string) {
         bidirectional: true,
         alignment: AlignmentType.RIGHT,
         spacing: { after: 120 },
-        rightToLeft: true,
       }),
     ]
   }
@@ -375,7 +372,6 @@ function textToParagraphs(text: string) {
         bidirectional: true,
         alignment: AlignmentType.RIGHT,
         spacing: { after: 120 },
-        rightToLeft: true,
       }),
   )
 }

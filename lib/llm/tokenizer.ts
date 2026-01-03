@@ -12,7 +12,7 @@ function resolveEncoding() {
   }
 
   try {
-    cachedEncoder = encoding_for_model(targetModel)
+    cachedEncoder = encoding_for_model(targetModel as any)
     cachedModel = targetModel
     return cachedEncoder
   } catch (error) {
