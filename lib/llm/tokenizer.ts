@@ -1,30 +1,60 @@
-import { encoding_for_model, get_encoding, Tiktoken } from '@dqbd/tiktoken'
-
 import { env } from '@/lib/env'
 
-let cachedEncoder: Tiktoken | null = null
-let cachedModel: string | null = null
+import { countTokens as countCl100kBase } from 'gpt-tokenizer/encoding/cl100k_base'
+import { countTokens as countO200kBase } from 'gpt-tokenizer/encoding/o200k_base'
+import { countTokens as countO200kHarmony } from 'gpt-tokenizer/encoding/o200k_harmony'
+import { countTokens as countP50kBase } from 'gpt-tokenizer/encoding/p50k_base'
+import { countTokens as countP50kEdit } from 'gpt-tokenizer/encoding/p50k_edit'
+import { countTokens as countR50kBase } from 'gpt-tokenizer/encoding/r50k_base'
+import {
+  cl100k_base as cl100kModels,
+  o200k_base as o200kModels,
+  o200k_harmony as o200kHarmonyModels,
+  p50k_base as p50kModels,
+  p50k_edit as p50kEditModels,
+  r50k_base as r50kModels,
+} from 'gpt-tokenizer/modelsMap'
 
-function resolveEncoding() {
-  const targetModel = env.LLM_MODEL
-  if (cachedEncoder && cachedModel === targetModel) {
-    return cachedEncoder
-  }
+type EncodingName = 'o200k_base' | 'o200k_harmony' | 'cl100k_base' | 'p50k_base' | 'p50k_edit' | 'r50k_base'
 
-  try {
-    cachedEncoder = encoding_for_model(targetModel as any)
-    cachedModel = targetModel
-    return cachedEncoder
-  } catch (error) {
-    console.warn(`Falling back to cl100k_base tokenizer for model ${targetModel}:`, error)
-    cachedEncoder = get_encoding('cl100k_base')
-    cachedModel = targetModel
-    return cachedEncoder
+type TokenCounter = (text: string) => number
+
+const ENCODING_COUNTERS: Record<EncodingName, TokenCounter> = {
+  o200k_base: (text) => countO200kBase(text),
+  o200k_harmony: (text) => countO200kHarmony(text),
+  cl100k_base: (text) => countCl100kBase(text),
+  p50k_base: (text) => countP50kBase(text),
+  p50k_edit: (text) => countP50kEdit(text),
+  r50k_base: (text) => countR50kBase(text),
+}
+
+const DEFAULT_ENCODING: EncodingName = 'o200k_base'
+
+const MODEL_TO_ENCODING = new Map<string, EncodingName>()
+
+function registerModels(models: readonly string[], encoding: EncodingName) {
+  for (const model of models) {
+    MODEL_TO_ENCODING.set(model.toLowerCase(), encoding)
   }
 }
 
-export function countTokens(text: string) {
-  const encoder = resolveEncoding()
+registerModels(o200kModels, 'o200k_base')
+registerModels(o200kHarmonyModels, 'o200k_harmony')
+registerModels(cl100kModels, 'cl100k_base')
+registerModels(p50kModels, 'p50k_base')
+registerModels(p50kEditModels, 'p50k_edit')
+registerModels(r50kModels, 'r50k_base')
+
+function resolveEncoding(modelName?: string | null): EncodingName {
+  if (!modelName) return DEFAULT_ENCODING
+  const normalized = modelName.trim().toLowerCase()
+  if (!normalized) return DEFAULT_ENCODING
+  return MODEL_TO_ENCODING.get(normalized) ?? DEFAULT_ENCODING
+}
+
+export function countTokens(text: string, modelOverride?: string) {
   if (!text) return 0
-  return encoder.encode(text).length
+  const encoding = resolveEncoding(modelOverride || env.LLM_MODEL)
+  const counter = ENCODING_COUNTERS[encoding] || ENCODING_COUNTERS[DEFAULT_ENCODING]
+  return counter(text)
 }
