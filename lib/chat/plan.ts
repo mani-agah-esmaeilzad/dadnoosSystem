@@ -27,6 +27,8 @@ export interface ConversationPlanInput {
   sessionMetadata?: ConversationMetadata | null
 }
 
+type ModuleSelection = Awaited<ReturnType<typeof selectModule>>
+
 export interface ConversationPlanResult {
   moduleId: ModuleId
   modulePrompt?: string
@@ -35,7 +37,7 @@ export interface ConversationPlanResult {
   metadata: ConversationMetadata
   mode: 'agent' | 'intake'
   intakeResponse?: string
-  routerDecision: (awaited ReturnType<typeof selectModule>)['routerDecision']
+  routerDecision: ModuleSelection['routerDecision']
 }
 
 const DOMAIN_LAWS: Record<string, string[]> = {
