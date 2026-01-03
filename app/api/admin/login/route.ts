@@ -17,8 +17,9 @@ const loginSchema = z.object({
 })
 
 function getClientIp(req: NextRequest) {
+  const requestWithIp = req as NextRequest & { ip?: string }
   return (
-    req.ip ||
+    requestWithIp.ip ||
     req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     req.headers.get('x-real-ip') ||
     'unknown'
