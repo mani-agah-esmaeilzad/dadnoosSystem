@@ -1,9 +1,19 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { applyStickyRouting, detectExplicitModuleIntent, detectFollowUp } from '@/lib/chat/router'
-import type { RouterDecision } from '@/lib/chat/sessionMetadata'
+vi.mock('@/lib/llm/client', () => ({
+  createChatCompletion: vi.fn(),
+}))
 
-function decision(module: RouterDecision['module'], confidence: number, notes = 'switch') {
+import {
+  applyStickyRouting,
+  detectExplicitModuleIntent,
+  detectFollowUp,
+  selectModule,
+} from '@/lib/chat/router'
+import type { ConversationMetadata } from '@/lib/chat/sessionMetadata'
+import { createChatCompletion } from '@/lib/llm/client'
+
+function decision(module: ReturnType<typeof applyStickyRouting>, confidence: number, notes = 'switch') {
   return {
     module,
     confidence,
@@ -14,6 +24,10 @@ function decision(module: RouterDecision['module'], confidence: number, notes = 
 }
 
 describe('router helpers', () => {
+  afterEach(() => {
+    vi.mocked(createChatCompletion).mockReset()
+  })
+
   it('detects follow-up intents', () => {
     expect(detectFollowUp('ادامه بده')).toBe(true)
     expect(detectFollowUp('باشه ادامه بده')).toBe(true)
@@ -44,5 +58,17 @@ describe('router helpers', () => {
       routerDecision: decision('contract_review', 0.9, 'کاربر درباره تحلیل قرارداد پرسید'),
     })
     expect(result).toBe('contract_review')
+  })
+
+  it('falls back to generic_chat when router output is invalid', async () => {
+    vi.mocked(createChatCompletion).mockResolvedValueOnce('invalid-json')
+    const result = await selectModule({
+      message: 'ادامه بده',
+      summaryJson: null,
+      history: [],
+      metadata: {} as ConversationMetadata,
+    })
+    expect(result.module).toBe('generic_chat')
+    expect(result.routerDecision.notes).toBe('invalid_router_output')
   })
 })
