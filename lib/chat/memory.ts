@@ -6,6 +6,7 @@ import { env } from '@/lib/env'
 import { deserializeContent, partsToPlainText } from '@/lib/chat/messages'
 import { estimateTokensFromText } from '@/lib/llm/tokens'
 import { ConversationSummary, generateConversationSummary, SummarizableMessage } from '@/lib/chat/summarizer'
+import { recordTrackingEvent } from '@/lib/tracking/events'
 
 interface NormalizedMessage extends SummarizableMessage {
   tokenCount: number
@@ -198,6 +199,16 @@ export async function buildConversationMemory({
       env.SUMMARY_MAX_INPUT_MESSAGES
     )
     if (chunk.length) {
+      await recordTrackingEvent({
+        userId,
+        eventType: 'summarization_trigger',
+        source: 'conversation_memory',
+        payload: {
+          messagesEvaluated: unsummarizedMessages.length,
+          tokensEvaluated: unsummarizedTokens,
+          summaryTokens,
+        },
+      })
       try {
         currentSummary = await persistSummary({
           userId,

@@ -12,11 +12,15 @@ import { HttpError } from '@/lib/http/errors'
 import { estimateTokensFromMessages, estimateTokensFromText } from '@/lib/llm/tokens'
 import { isBuildTime } from '@/lib/runtime/build'
 import { planConversation } from '@/lib/chat/plan'
+import { recordTrackingEvent } from '@/lib/tracking/events'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
+  let currentUserId: string | null = null
+  let currentChatId: string | null = null
+  const startedAt = Date.now()
   try {
     if (isBuildTime) {
       return NextResponse.json({
@@ -25,16 +29,19 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    const [{ prisma }, { prepareChatContext }, { serializeContent }, quotaModule] = await Promise.all([
+    const [{ prisma }, { prepareChatContext }, { serializeContent }, quotaModule, monthlyQuotaModule] = await Promise.all([
       import('@/lib/db/prisma'),
       import('@/lib/chat/context'),
       import('@/lib/chat/messages'),
       import('@/lib/billing/quota'),
+      import('@/lib/quota/monthly'),
     ])
 
     const { enforceQuota, recordUsage } = quotaModule
+    const { enforceMonthlyQuota, addMonthlyUsage } = monthlyQuotaModule
 
     const auth = requireAuth(req)
+    currentUserId = auth.sub
     enforceBodySizeLimit(req, env.MAX_UPLOAD_BYTES * 2)
     await enforceRateLimit({
       key: `ratelimit:chat:${auth.sub}`,
@@ -45,6 +52,17 @@ export async function POST(req: NextRequest) {
     const payload = await req.json()
     const body = chatRequestSchema.parse(payload)
     const prepared = await prepareChatContext(auth.sub, body)
+    currentChatId = prepared.sessionChatId
+    await recordTrackingEvent({
+      userId: auth.sub,
+      eventType: 'chat_request',
+      source: 'api/v1/chat',
+      payload: {
+        chatId: prepared.sessionChatId,
+        hasAttachments: prepared.attachmentContext.length > 0,
+        messageLength: prepared.userPlainText.length,
+      },
+    })
 
     const plan = await planConversation({
       userId: auth.sub,
@@ -66,6 +84,18 @@ export async function POST(req: NextRequest) {
           role: 'assistant',
           content: serializeContent([{ type: 'text', text }]),
           tokenCount: assistantTokens,
+        },
+      })
+      await recordTrackingEvent({
+        userId: auth.sub,
+        eventType: 'chat_success',
+        source: 'api/v1/chat',
+        payload: {
+          chatId: prepared.sessionChatId,
+          module: plan.moduleId,
+          totalTokens: assistantTokens,
+          durationMs: Date.now() - startedAt,
+          mode: 'intake',
         },
       })
       return NextResponse.json({ response: text })
@@ -90,6 +120,7 @@ export async function POST(req: NextRequest) {
     const estimatedPromptTokens = estimateTokensFromMessages(agentMessages)
 
     await enforceQuota(auth.sub, estimatedPromptTokens)
+    await enforceMonthlyQuota(auth.sub, estimatedPromptTokens)
 
     const agent = await runAgent({
       message: prepared.userPlainText,
@@ -101,9 +132,11 @@ export async function POST(req: NextRequest) {
     })
 
     const assistantTokens = estimateTokensFromText(agent.text)
-    await recordUsage(auth.sub, estimatedPromptTokens + assistantTokens)
+    const totalTokens = estimatedPromptTokens + assistantTokens
+    await recordUsage(auth.sub, totalTokens)
+    await addMonthlyUsage(auth.sub, totalTokens)
 
-    await prisma.message.create({
+    const assistantMessage = await prisma.message.create({
       data: {
         id: crypto.randomUUID(),
         userId: auth.sub,
@@ -114,8 +147,52 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    await prisma.tokenUsage.create({
+      data: {
+        userId: auth.sub,
+        chatId: prepared.sessionChatId,
+        messageId: assistantMessage.id,
+        module: plan.moduleId,
+        model: env.LLM_MODEL,
+        endpoint: '/api/v1/chat',
+        promptTokens: estimatedPromptTokens,
+        completionTokens: assistantTokens,
+        totalTokens,
+      },
+    })
+
+    await recordTrackingEvent({
+      userId: auth.sub,
+      eventType: 'chat_success',
+      source: 'api/v1/chat',
+      payload: {
+        chatId: prepared.sessionChatId,
+        module: plan.moduleId,
+        totalTokens,
+        durationMs: Date.now() - startedAt,
+      },
+    })
+
     return NextResponse.json({ response: agent.text })
   } catch (error) {
+    if (currentUserId) {
+      const statusGuess =
+        error instanceof HttpError
+          ? error.status
+          : error instanceof SyntaxError || error instanceof z.ZodError
+            ? 400
+            : (error as { status?: number }).status ?? 500
+      await recordTrackingEvent({
+        userId: currentUserId,
+        eventType: 'chat_fail',
+        source: 'api/v1/chat',
+        payload: {
+          chatId: currentChatId ?? undefined,
+          status: statusGuess,
+          message: error instanceof Error ? error.message : 'unknown_error',
+        },
+      })
+    }
     if (error instanceof HttpError) {
       return NextResponse.json({ detail: error.message }, { status: error.status })
     }

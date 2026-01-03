@@ -50,6 +50,7 @@ const envSchema = z.object({
   SUMMARY_MODEL: z.string().optional(),
   ADMIN_BOOTSTRAP_EMAIL: z.string().email().optional(),
   ADMIN_BOOTSTRAP_PASSWORD: z.string().min(8).optional(),
+  ADMIN_SESSION_TTL_HOURS: z.coerce.number().int().positive().default(24),
 })
 
 export type AppEnv = z.infer<typeof envSchema>
@@ -108,6 +109,7 @@ const rawEnv = {
   SUMMARY_MODEL: sanitize(process.env.SUMMARY_MODEL),
   ADMIN_BOOTSTRAP_EMAIL: sanitize(process.env.ADMIN_BOOTSTRAP_EMAIL),
   ADMIN_BOOTSTRAP_PASSWORD: sanitize(process.env.ADMIN_BOOTSTRAP_PASSWORD),
+  ADMIN_SESSION_TTL_HOURS: sanitize(process.env.ADMIN_SESSION_TTL_HOURS),
 }
 
 const buildFallbacks: Record<string, string> = {
@@ -147,6 +149,7 @@ const buildFallbacks: Record<string, string> = {
   SUMMARY_KEEP_LAST_MESSAGES: '5',
   SUMMARY_TARGET_TOKENS: '1200',
   SUMMARY_MAX_INPUT_MESSAGES: '100',
+  ADMIN_SESSION_TTL_HOURS: '24',
 }
 
 const shouldAllowFallback = isBuildTime || process.env.VERCEL === '1' || process.env.ALLOW_RUNTIME_ENV_FALLBACK === '1'

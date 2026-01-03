@@ -17,6 +17,7 @@ import {
 } from '@/lib/chat/intake'
 import { selectModule } from '@/lib/chat/router'
 import { lookupLegalArticles } from '@/lib/legal/articles/lookup'
+import { recordTrackingEvent } from '@/lib/tracking/events'
 
 export interface ConversationPlanInput {
   userId: string
@@ -66,6 +67,16 @@ export async function planConversation({
 }: ConversationPlanInput): Promise<ConversationPlanResult> {
   const metadata = normalizeMetadata(sessionMetadata)
   const routing = await selectModule({ message, summaryJson, history, metadata })
+  await recordTrackingEvent({
+    userId,
+    eventType: 'router_decision',
+    source: 'chat_router',
+    payload: {
+      module: routing.routerDecision.module,
+      confidence: routing.routerDecision.confidence,
+      notes: routing.routerDecision.notes,
+    },
+  })
 
   setRouterDecision(metadata, routing.routerDecision)
   setActiveModule(metadata, routing.module)
