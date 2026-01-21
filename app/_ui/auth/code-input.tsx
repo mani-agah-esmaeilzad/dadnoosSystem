@@ -20,9 +20,10 @@ export default function InputVerificationCode({
   callbackPath,
 }: InputVerificationCodeProps) {
   const COUNTER_INITIAL_VALUE = 90
+  const OTP_LENGTH = 5
 
   const [successSubmit, setSuccessSubmit] = useState<boolean>(false)
-  const [otp, setOtp] = useState<string[]>(new Array(6).fill(''))
+  const [otp, setOtp] = useState<string[]>(new Array(OTP_LENGTH).fill(''))
   const [counter, setCounter] = useState<number>(COUNTER_INITIAL_VALUE)
   const [hasError, setHasError] = useState<boolean>(false)
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
@@ -63,7 +64,7 @@ export default function InputVerificationCode({
 
   const resetTimer = () => {
     stopTimer()
-    setOtp(new Array(6).fill(''))
+    setOtp(new Array(OTP_LENGTH).fill(''))
     setCounter(COUNTER_INITIAL_VALUE)
     startTimer()
   }

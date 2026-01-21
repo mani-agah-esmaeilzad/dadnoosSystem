@@ -41,5 +41,5 @@ export function otpVerifiedKey(phone: string) {
 }
 
 export function generateOtpCode(): string {
-  return crypto.randomInt(0, 1_000_000).toString().padStart(6, '0')
+  return crypto.randomInt(0, 100_000).toString().padStart(5, '0')
 }
