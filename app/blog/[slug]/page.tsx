@@ -28,7 +28,12 @@ const markdownComponents: Components = {
     <blockquote className="my-6 border-r-4 border-neutral-200 pr-4 italic text-neutral-600 dark:border-neutral-700 dark:text-neutral-300" {...props} />
   ),
   a: (props) => <a className="font-semibold text-[#9b956d] underline-offset-2 hover:underline" {...props} />,
-  code({ className, children, inline, ...props }) {
+  code({
+    className,
+    children,
+    inline,
+    ...props
+  }: React.ComponentProps<'code'> & { inline?: boolean }) {
     if (inline) {
       return (
         <code className="rounded-xl bg-neutral-100 px-1.5 py-0.5 text-sm text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100" {...props}>
