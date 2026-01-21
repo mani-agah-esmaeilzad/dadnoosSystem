@@ -1,3 +1,5 @@
+import { Prisma } from '@prisma/client'
+
 import { prisma } from '@/lib/db/prisma'
 
 export interface BlogPostPreview {
@@ -11,6 +13,10 @@ export interface BlogPostPreview {
 
 export interface BlogPostDetail extends BlogPostPreview {
   content: string
+}
+
+function isMissingBlogTable(error: unknown) {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2021'
 }
 
 function buildExcerpt(content: string, excerpt?: string | null) {
@@ -30,34 +36,48 @@ function buildExcerpt(content: string, excerpt?: string | null) {
 }
 
 export async function listPublishedBlogPosts(limit?: number): Promise<BlogPostPreview[]> {
-  const posts = await prisma.blogPost.findMany({
-    where: { published: true },
-    orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
-    take: typeof limit === 'number' ? limit : undefined,
-  })
+  try {
+    const posts = await prisma.blogPost.findMany({
+      where: { published: true },
+      orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
+      take: typeof limit === 'number' ? limit : undefined,
+    })
 
-  return posts.map((post) => ({
-    id: post.id,
-    title: post.title,
-    slug: post.slug,
-    excerpt: buildExcerpt(post.content, post.excerpt),
-    coverImageUrl: post.coverImageUrl ?? null,
-    publishedAt: post.publishedAt ?? post.createdAt,
-  }))
+    return posts.map((post) => ({
+      id: post.id,
+      title: post.title,
+      slug: post.slug,
+      excerpt: buildExcerpt(post.content, post.excerpt),
+      coverImageUrl: post.coverImageUrl ?? null,
+      publishedAt: post.publishedAt ?? post.createdAt,
+    }))
+  } catch (error) {
+    if (isMissingBlogTable(error)) {
+      return []
+    }
+    throw error
+  }
 }
 
 export async function getPublishedBlogPost(slug: string): Promise<BlogPostDetail | null> {
-  const post = await prisma.blogPost.findUnique({
-    where: { slug },
-  })
-  if (!post || !post.published) return null
-  return {
-    id: post.id,
-    title: post.title,
-    slug: post.slug,
-    excerpt: buildExcerpt(post.content, post.excerpt),
-    content: post.content,
-    coverImageUrl: post.coverImageUrl ?? null,
-    publishedAt: post.publishedAt ?? post.createdAt,
+  try {
+    const post = await prisma.blogPost.findUnique({
+      where: { slug },
+    })
+    if (!post || !post.published) return null
+    return {
+      id: post.id,
+      title: post.title,
+      slug: post.slug,
+      excerpt: buildExcerpt(post.content, post.excerpt),
+      content: post.content,
+      coverImageUrl: post.coverImageUrl ?? null,
+      publishedAt: post.publishedAt ?? post.createdAt,
+    }
+  } catch (error) {
+    if (isMissingBlogTable(error)) {
+      return null
+    }
+    throw error
   }
 }
