@@ -3,6 +3,8 @@ import Footer from '@/app/_ui/footer'
 import BlogCards from '@/app/_ui/blog/BlogCards'
 import { listPublishedBlogPosts } from '@/lib/blog/posts'
 
+export const revalidate = 60
+
 export const metadata = {
   title: 'وبلاگ دادنوس',
 }

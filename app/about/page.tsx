@@ -5,6 +5,8 @@ import BlogSection from '@/app/_ui/about/BlogSection'
 import AboutScrollManager from '@/app/about/scroll-to-footer'
 import { listPublishedBlogPosts } from '@/lib/blog/posts'
 
+export const revalidate = 60
+
 export const metadata = {
   title: 'معرفی دادنوس',
 }
