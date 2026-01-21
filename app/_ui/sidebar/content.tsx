@@ -456,6 +456,23 @@ export default function SidebarContent({
           </div>
 
           <div className="grid gap-y-0.5 py-3 border-t border-neutral-400/15 mt-3">
+          <div>
+              <Button
+                variant="ghost"
+                className="w-full justify-start px-3 h-auto"
+                onClick={() => {
+                  if (isMobile) onToggle();
+                  onStartChatWithPrompt(barExamSuggestions.map(p => ({ prompt: p, title: "پیش بینی آرا" })))
+                }}
+                disabled
+              >
+                <div className="flex items-center gap-3">
+                  <School className="size-6" />
+                  <h3>پیش بینی آرا</h3>
+                </div>
+                <ComingSoon />
+              </Button>
+            </div>
             <div>
               <Button
                 variant="ghost"
