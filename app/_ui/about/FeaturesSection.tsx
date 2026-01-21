@@ -1,3 +1,5 @@
+'use client'
+
 import { motion } from "framer-motion"
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/app/_ui/components/accordion"
 import { useState } from "react"
