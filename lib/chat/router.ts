@@ -103,7 +103,8 @@ function parseRouterText(raw: string) {
 }
 
 async function callRouterModel(input: { userMessage: string; summarySnippet?: string; historySnippet?: string }) {
-  const routerPrompt = getRouterPromptEntry().content
+  const routerPromptEntry = await getRouterPromptEntry()
+  const routerPrompt = routerPromptEntry.content
   const payload = [
     '[زمینه فعلی]',
     input.summarySnippet ? `خلاصه: ${input.summarySnippet}` : '',
@@ -121,6 +122,7 @@ async function callRouterModel(input: { userMessage: string; summarySnippet?: st
     ],
     temperature: 0,
     maxTokens: 200,
+    model: routerPromptEntry.model ?? undefined,
   })
 
   const rawObject = parseRouterText(raw)

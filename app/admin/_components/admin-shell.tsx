@@ -25,6 +25,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'کاربران', href: '/admin/users' },
   { label: 'مصرف توکن', href: '/admin/usage' },
   { label: 'وبلاگ', href: '/admin/blogs' },
+  { label: 'پرامپت‌ها', href: '/admin/prompts' },
   { label: 'پشتیبانی', href: '/admin/support' },
   { label: 'رویدادها', href: '/admin/events' },
   { label: 'گزارش بازرسی', href: '/admin/audit-logs' },

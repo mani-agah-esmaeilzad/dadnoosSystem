@@ -1,4 +1,3 @@
-import { SYSTEM_PROMPT } from '@/lib/agent/systemPrompt'
 import { createChatCompletion, LlmMessage } from '@/lib/llm/client'
 
 export interface ConversationTurn {
@@ -19,12 +18,14 @@ export interface AgentMetadata {
 }
 
 export interface RunAgentInput {
+  corePrompt: string
   message: string
   history?: ConversationTurn[]
   summaryJson?: string
   metadata?: AgentMetadata
   modulePrompt?: string
   articleLookupJson?: string
+  model?: string
 }
 
 export interface RunAgentResult {
@@ -68,6 +69,7 @@ function formatMetadata(metadata?: AgentMetadata) {
 }
 
 export interface BuildAgentMessagesInput {
+  corePrompt: string
   history: ConversationTurn[]
   message: string
   metadata?: AgentMetadata
@@ -77,6 +79,7 @@ export interface BuildAgentMessagesInput {
 }
 
 export function buildAgentMessages({
+  corePrompt,
   history,
   message,
   metadata,
@@ -84,7 +87,7 @@ export function buildAgentMessages({
   modulePrompt,
   articleLookupJson,
 }: BuildAgentMessagesInput): LlmMessage[] {
-  const llmMessages: LlmMessage[] = [{ role: 'system', content: SYSTEM_PROMPT }]
+  const llmMessages: LlmMessage[] = [{ role: 'system', content: corePrompt }]
 
   if (modulePrompt) {
     llmMessages.push({ role: 'system', content: modulePrompt })
@@ -115,14 +118,17 @@ export function buildAgentMessages({
 }
 
 export async function runAgent({
+  corePrompt,
   message,
   history = [],
   metadata,
   summaryJson,
   modulePrompt,
   articleLookupJson,
+  model,
 }: RunAgentInput): Promise<RunAgentResult> {
   const llmMessages = buildAgentMessages({
+    corePrompt,
     history,
     message,
     metadata,
@@ -131,6 +137,6 @@ export async function runAgent({
     articleLookupJson,
   })
 
-  const text = await createChatCompletion({ messages: llmMessages })
+  const text = await createChatCompletion({ messages: llmMessages, model })
   return { text }
 }

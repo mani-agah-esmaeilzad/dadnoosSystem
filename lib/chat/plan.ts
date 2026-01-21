@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db/prisma'
-import { getModuleById } from '@/lib/agent/registry'
+import { getModuleById, type ModuleRegistryEntry } from '@/lib/agent/registry'
 import { ModuleConfig, ModuleId, getModuleConfig } from '@/lib/chat/modules'
 import {
   ConversationMetadata,
@@ -32,7 +32,7 @@ type ModuleSelection = Awaited<ReturnType<typeof selectModule>>
 
 export interface ConversationPlanResult {
   moduleId: ModuleId
-  modulePrompt?: string
+  modulePrompt?: ModuleRegistryEntry
   metadataNote?: string
   articleLookupJson?: string | null
   metadata: ConversationMetadata
@@ -81,7 +81,8 @@ export async function planConversation({
   setRouterDecision(metadata, routing.routerDecision)
   setActiveModule(metadata, routing.module)
 
-  const modulePrompt = getModuleById(routing.module)?.content
+  const modulePromptEntry = await getModuleById(routing.module)
+  const modulePrompt = modulePromptEntry?.content
   let metadataNote = ''
   let articleLookupJson: string | null = null
   let intakeResponse: string | undefined
@@ -136,7 +137,7 @@ export async function planConversation({
 
   return {
     moduleId: routing.module,
-    modulePrompt,
+    modulePrompt: modulePromptEntry,
     metadataNote: metadataNote || undefined,
     articleLookupJson,
     metadata,

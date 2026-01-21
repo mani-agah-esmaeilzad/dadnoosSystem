@@ -58,9 +58,9 @@ The command runs Next.js (frontend + APIs) on port 3052 by default. No Python/FA
 
 ## System Prompt
 
-- Editable prompt lives in `prompts/system.md`.
-- `lib/agent/systemPrompt.ts` loads it once per process; restart dev/prod servers after editing.
-- The agent logic (`lib/agent/runner.ts`) injects this prompt along with conversation history and optional attachment metadata—no RAG/vector search is performed.
+- Defaults still live under `prompts/system.md` + `prompts/registry.json`, but at runtime everything is loaded from the `PromptConfig` table (with the filesystem acting as fallback).
+- Use `/admin/prompts` to view/edit the core prompt, router prompt, and every module overlay; changes apply immediately and you can reset any entry back to its default.
+- The agent runner (`lib/agent/runner.ts`) injects the active prompt alongside history and attachment metadata, and each prompt may optionally pin a different LLM model (falling back to `LLM_MODEL` when empty).
 
 ## Testing & Verification
 

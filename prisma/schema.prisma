@@ -259,3 +259,23 @@ model UserQuota {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+enum PromptType {
+  SYSTEM
+  CORE
+  ROUTER
+  MODULE
+}
+
+model PromptConfig {
+  id          String     @id @default(uuid())
+  slug        String     @unique
+  type        PromptType
+  name        String
+  description String?
+  content     String     @db.Text
+  model       String?
+  metadata    Json?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}

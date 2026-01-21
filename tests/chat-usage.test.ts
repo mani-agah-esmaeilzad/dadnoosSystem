@@ -4,11 +4,13 @@ import { HttpError } from '@/lib/http/errors'
 
 const messageCreate = vi.fn().mockResolvedValue({ id: 'assistant-message' })
 const tokenUsageCreate = vi.fn().mockResolvedValue({})
+const promptConfigFindUnique = vi.fn().mockResolvedValue(null)
 
 vi.mock('@/lib/db/prisma', () => ({
   prisma: {
     message: { create: messageCreate },
     tokenUsage: { create: tokenUsageCreate },
+    promptConfig: { findUnique: promptConfigFindUnique },
   },
 }))
 

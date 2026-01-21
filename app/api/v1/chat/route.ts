@@ -13,6 +13,7 @@ import { estimateTokensFromMessages, estimateTokensFromText } from '@/lib/llm/to
 import { isBuildTime } from '@/lib/runtime/build'
 import { planConversation } from '@/lib/chat/plan'
 import { recordTrackingEvent } from '@/lib/tracking/events'
+import { getCorePromptEntry } from '@/lib/agent/registry'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -109,12 +110,18 @@ export async function POST(req: NextRequest) {
       agentMetadata.notes = plan.metadataNote
     }
     const metadata = Object.keys(agentMetadata).length ? agentMetadata : undefined
+    const corePrompt = await getCorePromptEntry()
+    const modulePrompt = plan.modulePrompt
+
+    const selectedModel = modulePrompt?.model ?? corePrompt.model ?? undefined
+
     const agentMessages = buildAgentMessages({
+      corePrompt: corePrompt.content,
       history: prepared.history,
       message: prepared.userPlainText,
       metadata,
       summaryJson: prepared.summaryJson || undefined,
-      modulePrompt: plan.modulePrompt,
+      modulePrompt: modulePrompt?.content,
       articleLookupJson: plan.articleLookupJson ?? undefined,
     })
     const estimatedPromptTokens = estimateTokensFromMessages(agentMessages)
@@ -123,12 +130,14 @@ export async function POST(req: NextRequest) {
     await enforceMonthlyQuota(auth.sub, estimatedPromptTokens)
 
     const agent = await runAgent({
+      corePrompt: corePrompt.content,
       message: prepared.userPlainText,
       history: prepared.history,
       summaryJson: prepared.summaryJson || undefined,
       metadata,
-      modulePrompt: plan.modulePrompt,
+      modulePrompt: modulePrompt?.content,
       articleLookupJson: plan.articleLookupJson ?? undefined,
+      model: selectedModel,
     })
 
     const assistantTokens = estimateTokensFromText(agent.text)
@@ -153,7 +162,7 @@ export async function POST(req: NextRequest) {
         chatId: prepared.sessionChatId,
         messageId: assistantMessage.id,
         module: plan.moduleId,
-        model: env.LLM_MODEL,
+        model: selectedModel ?? env.LLM_MODEL,
         endpoint: '/api/v1/chat',
         promptTokens: estimatedPromptTokens,
         completionTokens: assistantTokens,

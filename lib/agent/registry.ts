@@ -1,52 +1,26 @@
-import fs from 'node:fs'
-import path from 'node:path'
+import type { PromptConfigDTO } from '@/lib/prompts/service'
+import { buildModulePromptSlug, getPromptConfig, listPromptConfigs } from '@/lib/prompts/service'
 
-import { z } from 'zod'
+export type PromptEntry = PromptConfigDTO
+export type ModuleRegistryEntry = PromptConfigDTO
 
-const promptEntrySchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  content: z.string(),
-})
-
-const registrySchema = z.object({
-  core: promptEntrySchema,
-  modules: z.array(promptEntrySchema),
-  router: promptEntrySchema,
-})
-
-export type PromptEntry = z.infer<typeof promptEntrySchema>
-export type ModuleRegistryEntry = PromptEntry
-
-interface PromptRegistry {
-  core: PromptEntry
-  modules: ModuleRegistryEntry[]
-  router: PromptEntry
+export async function getCorePromptEntry(): Promise<PromptEntry> {
+  return getPromptConfig('core')
 }
 
-let cachedRegistry: PromptRegistry | null = null
-
-function loadRegistry(): PromptRegistry {
-  if (cachedRegistry) return cachedRegistry
-  const registryPath = path.join(process.cwd(), 'prompts', 'registry.json')
-  const raw = fs.readFileSync(registryPath, 'utf-8')
-  const parsed = registrySchema.parse(JSON.parse(raw))
-  cachedRegistry = parsed
-  return parsed
+export async function getRouterPromptEntry(): Promise<PromptEntry> {
+  return getPromptConfig('router')
 }
 
-export function getCorePromptEntry() {
-  return loadRegistry().core
+export async function getModuleEntries(): Promise<ModuleRegistryEntry[]> {
+  const prompts = await listPromptConfigs()
+  return prompts.filter((prompt) => prompt.slug.startsWith('module:'))
 }
 
-export function getRouterPromptEntry() {
-  return loadRegistry().router
-}
-
-export function getModuleEntries(): ModuleRegistryEntry[] {
-  return loadRegistry().modules
-}
-
-export function getModuleById(id: string): ModuleRegistryEntry | undefined {
-  return getModuleEntries().find((entry) => entry.id === id)
+export async function getModuleById(id: string): Promise<ModuleRegistryEntry | undefined> {
+  try {
+    return await getPromptConfig(buildModulePromptSlug(id))
+  } catch {
+    return undefined
+  }
 }
