@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db/prisma'
 import { normalizeSlug } from '@/lib/blog/slug'
 import { HttpError } from '@/lib/http/errors'
+import { isMissingBlogTable } from '@/lib/blog/errors'
 
 export interface AdminBlogPost {
   id: string
@@ -47,6 +48,10 @@ function handlePrismaError(error: unknown): never {
   throw error
 }
 
+function missingTableHttpError(): never {
+  throw new HttpError(500, 'جدول وبلاگ در پایگاه داده موجود نیست. لطفاً مهاجرت‌های جدید را اجرا کنید.')
+}
+
 export async function listBlogPosts({ page, pageSize, query, published }: BlogPostFilters) {
   const where: Prisma.BlogPostWhereInput = {}
   if (query) {
@@ -59,22 +64,57 @@ export async function listBlogPosts({ page, pageSize, query, published }: BlogPo
     where.published = published
   }
 
-  const [total, posts] = await Promise.all([
-    prisma.blogPost.count({ where }),
-    prisma.blogPost.findMany({
-      where,
-      orderBy: [{ publishedAt: 'desc' }, { updatedAt: 'desc' }],
-      include: { author: true },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
-  ])
+  try {
+    const [total, posts] = await Promise.all([
+      prisma.blogPost.count({ where }),
+      prisma.blogPost.findMany({
+        where,
+        orderBy: [{ publishedAt: 'desc' }, { updatedAt: 'desc' }],
+        include: { author: true },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ])
 
-  return {
-    total,
-    page,
-    pageSize,
-    items: posts.map<AdminBlogPost>((post) => ({
+    return {
+      total,
+      page,
+      pageSize,
+      items: posts.map<AdminBlogPost>((post) => ({
+        id: post.id,
+        title: post.title,
+        slug: post.slug,
+        excerpt: post.excerpt,
+        content: post.content,
+        coverImageUrl: post.coverImageUrl,
+        published: post.published,
+        publishedAt: post.publishedAt,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        authorEmail: post.author?.email ?? null,
+      })),
+    }
+  } catch (error) {
+    if (isMissingBlogTable(error)) {
+      return {
+        total: 0,
+        page,
+        pageSize,
+        items: [],
+      }
+    }
+    throw error
+  }
+}
+
+export async function getBlogPostById(postId: string): Promise<AdminBlogPost | null> {
+  try {
+    const post = await prisma.blogPost.findUnique({
+      where: { id: postId },
+      include: { author: true },
+    })
+    if (!post) return null
+    return {
       id: post.id,
       title: post.title,
       slug: post.slug,
@@ -86,28 +126,12 @@ export async function listBlogPosts({ page, pageSize, query, published }: BlogPo
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
       authorEmail: post.author?.email ?? null,
-    })),
-  }
-}
-
-export async function getBlogPostById(postId: string): Promise<AdminBlogPost | null> {
-  const post = await prisma.blogPost.findUnique({
-    where: { id: postId },
-    include: { author: true },
-  })
-  if (!post) return null
-  return {
-    id: post.id,
-    title: post.title,
-    slug: post.slug,
-    excerpt: post.excerpt,
-    content: post.content,
-    coverImageUrl: post.coverImageUrl,
-    published: post.published,
-    publishedAt: post.publishedAt,
-    createdAt: post.createdAt,
-    updatedAt: post.updatedAt,
-    authorEmail: post.author?.email ?? null,
+    }
+  } catch (error) {
+    if (isMissingBlogTable(error)) {
+      return null
+    }
+    throw error
   }
 }
 
@@ -131,26 +155,29 @@ export async function createBlogPost(data: BlogPostInput, adminId: string) {
       },
     })
   } catch (error) {
+    if (isMissingBlogTable(error)) {
+      missingTableHttpError()
+    }
     handlePrismaError(error)
   }
 }
 
 export async function updateBlogPost(postId: string, data: BlogPostInput) {
-  const existing = await prisma.blogPost.findUnique({ where: { id: postId } })
-  if (!existing) {
-    throw new HttpError(404, 'مقاله یافت نشد.')
-  }
-
-  const slug = normalizeSlug(data.slug || data.title)
-  if (!slug) {
-    throw new HttpError(400, 'اسلاگ معتبر نیست.')
-  }
-
-  const now = new Date()
-  const shouldPublish = data.published
-  const publishedAt = shouldPublish ? existing.publishedAt ?? now : null
-
   try {
+    const existing = await prisma.blogPost.findUnique({ where: { id: postId } })
+    if (!existing) {
+      throw new HttpError(404, 'مقاله یافت نشد.')
+    }
+
+    const slug = normalizeSlug(data.slug || data.title)
+    if (!slug) {
+      throw new HttpError(400, 'اسلاگ معتبر نیست.')
+    }
+
+    const now = new Date()
+    const shouldPublish = data.published
+    const publishedAt = shouldPublish ? existing.publishedAt ?? now : null
+
     return await prisma.blogPost.update({
       where: { id: postId },
       data: {
@@ -164,6 +191,9 @@ export async function updateBlogPost(postId: string, data: BlogPostInput) {
       },
     })
   } catch (error) {
+    if (isMissingBlogTable(error)) {
+      missingTableHttpError()
+    }
     handlePrismaError(error)
   }
 }
@@ -174,6 +204,9 @@ export async function deleteBlogPost(postId: string) {
       where: { id: postId },
     })
   } catch (error) {
+    if (isMissingBlogTable(error)) {
+      missingTableHttpError()
+    }
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
       throw new HttpError(404, 'مقاله یافت نشد.')
     }

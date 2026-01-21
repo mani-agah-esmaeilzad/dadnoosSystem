@@ -1,6 +1,5 @@
-import { Prisma } from '@prisma/client'
-
 import { prisma } from '@/lib/db/prisma'
+import { isMissingBlogTable } from '@/lib/blog/errors'
 
 export interface BlogPostPreview {
   id: string
@@ -13,10 +12,6 @@ export interface BlogPostPreview {
 
 export interface BlogPostDetail extends BlogPostPreview {
   content: string
-}
-
-function isMissingBlogTable(error: unknown) {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2021'
 }
 
 function buildExcerpt(content: string, excerpt?: string | null) {
