@@ -1,4 +1,4 @@
-import type { Prisma, PromptType } from '@prisma/client'
+import { Prisma, type PromptType } from '@prisma/client'
 
 import { prisma } from '@/lib/db/prisma'
 import { DefaultPromptEntry, getDefaultPromptBySlug, getDefaultPrompts } from '@/lib/prompts/defaults'
