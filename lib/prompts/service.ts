@@ -1,4 +1,4 @@
-import type { PromptType } from '@prisma/client'
+import type { Prisma, PromptType } from '@prisma/client'
 
 import { prisma } from '@/lib/db/prisma'
 import { DefaultPromptEntry, getDefaultPromptBySlug, getDefaultPrompts } from '@/lib/prompts/defaults'
@@ -13,7 +13,7 @@ export interface PromptConfigDTO {
   content: string
   model?: string | null
   description?: string | null
-  metadata?: Record<string, unknown> | null
+  metadata?: unknown
   source: PromptSource
   updatedAt?: Date
   createdAt?: Date
@@ -44,7 +44,7 @@ function mapDb(entry: {
   content: string
   model: string | null
   description: string | null
-  metadata: Record<string, unknown> | null
+  metadata: unknown
   createdAt: Date
   updatedAt: Date
 }): PromptConfigDTO {
@@ -67,6 +67,12 @@ function normalizeModelInput(model?: string | null) {
   if (!model) return null
   const trimmed = model.trim()
   return trimmed.length ? trimmed : null
+}
+
+function normalizeMetadataInput(value: unknown): Prisma.InputJsonValue | typeof Prisma.JsonNull | undefined {
+  if (value === undefined) return undefined
+  if (value === null) return Prisma.JsonNull
+  return value as Prisma.InputJsonValue
 }
 
 export async function getPromptConfig(slug: string): Promise<PromptConfigDTO> {
@@ -125,7 +131,7 @@ export async function upsertPromptConfig(slug: string, data: { content: string; 
       content: data.content,
       model: modelValue,
       description: fallback.description,
-      metadata: fallback.metadata,
+      metadata: normalizeMetadataInput(fallback.metadata),
     },
   })
   return mapDb(record)

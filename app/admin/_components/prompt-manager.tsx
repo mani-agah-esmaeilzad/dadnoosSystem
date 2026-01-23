@@ -15,7 +15,7 @@ export interface PromptViewModel {
   content: string
   model?: string | null
   description?: string | null
-  metadata?: Record<string, unknown> | null
+  metadata?: unknown
   source: 'default' | 'database'
   createdAt?: string | null
   updatedAt?: string | null
